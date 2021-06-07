@@ -1,6 +1,6 @@
-/data/instance_counts.json
-/data/road_trainval_v1.0.json
-/data/videos
-/data/videos.zip
-/kinetics-pt/*.pth
+/data/road/instance_counts.json
+/data/road/road_trainval_v1.0.json
+/data/road/videos
+/data/road/videos.zip
+/data/kinetics-pt/*.pth
 
