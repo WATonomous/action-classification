@@ -1,3 +1,5 @@
-# Road Dataset Research
+# ROAD Dataset Research
 
-Dataset is downloaded using [data/get_dataset.sh](./data/get_dataset.sh).
+Repo for training on the ROAD dataset.
+
+[Baseline](https://github.com/gurkirt/3D-RetinaNet).

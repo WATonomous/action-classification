@@ -2,4 +2,5 @@
 /data/road_trainval_v1.0.json
 /data/videos
 /data/videos.zip
+/kinetics-pt/*.pth
 
