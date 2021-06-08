@@ -1,0 +1,33 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Train: ROAD Baseline",
+            "type": "python",
+            "request": "launch",
+            "program": "main.py",
+            "args": [
+                "../data/",
+                "../data/",
+                "../data/kinetics-pt/",
+                "--MODE=train",
+                "--ARCH=resnet50",
+                "--MODEL_TYPE=I3D",
+                "--DATASET=road",
+                "--TRAIN_SUBSETS=train_1",
+                "--VAL_SUBSETS=val_1",
+                "--SEQ_LEN=8",
+                "--TEST_SEQ_LEN=8",
+                "--BATCH_SIZE=4", // increasing the size by 1 requires 10 more GB of VRAM
+                "--LR=0.00245",
+                "--MILESTONES=6,8",
+                "--MAX_EPOCHS=10"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/3D-RetinaNet"
+        }
+    ]
+}
