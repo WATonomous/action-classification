@@ -24,7 +24,8 @@
                 "--BATCH_SIZE=4", // increasing the size by 1 requires 10 more GB of VRAM
                 "--LR=0.00245",
                 "--MILESTONES=6,8",
-                "--MAX_EPOCHS=10"
+                "--MAX_EPOCHS=10",
+                "--NUM_WORKERS=40",
             ],
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}/3D-RetinaNet"

@@ -3,6 +3,7 @@
 /data/road/videos
 /data/road/rgb-images
 /data/road/cache
+/data/road/cache.bak
 /data/road/videos.zip
 /data/kinetics-pt/*.pth
 
