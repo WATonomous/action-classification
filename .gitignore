@@ -7,3 +7,8 @@
 /data/road/videos.zip
 /data/kinetics-pt/*.pth
 
+/logs/*
+!/logs/.gitkeep
+/output/*
+!/output/.gitkeep
+
