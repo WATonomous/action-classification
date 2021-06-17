@@ -20,4 +20,4 @@ for line in $LINKS
 do
   wget https://s3.amazonaws.com/ava-dataset/trainval/$line -P ${DATA_DIR}
 done
-
+rm ava_file_names_trainval_v2.1.txt*
