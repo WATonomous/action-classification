@@ -8,5 +8,5 @@ This folder contains the scripts to pull the [ROAD Dataset](https://github.com/g
 # download videos and annotations
 ./get_dataset.sh
 # extract videos into frames for training
-python extract_videos2jpgs.py
+python extract_videos2jpgs.py .
 ```
