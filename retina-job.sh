@@ -18,7 +18,20 @@ virtualenv --no-download $VENV_DIR
 source $VENV_DIR/bin/activate
 pip install --no-index  torch torchvision tensorflow tensorboard tensorboardx numpy scipy pandas matplotlib
 
-# TODO: Tensorboard does not work in job node
-tensorboard --logdir=logs --host 0.0.0.0 &
-python 3D-RetinaNet/main.py ./data/ ./output/ ./data/kinetics-pt/ --MODE=train --ARCH=resnet50 --MODEL_TYPE=I3D --DATASET=road --TRAIN_SUBSETS=train_1 --VAL_SUBSETS=val_1 --SEQ_LEN=8 --TEST_SEQ_LEN=8 --BATCH_SIZE=1 --LR=0.00245 --MILESTONES=6,8 --MAX_EPOCHS=10
+python 3D-RetinaNet/main.py \
+	./data/ \
+	./output/ \
+	./data/kinetics-pt/ \
+	--MODE=train \
+	--ARCH=resnet50 \
+	--MODEL_TYPE=I3D \
+	--DATASET=road \
+	--TRAIN_SUBSETS=train_1 \
+	--VAL_SUBSETS=val_1 \
+	--SEQ_LEN=8 \
+	--TEST_SEQ_LEN=8 \
+	--BATCH_SIZE=1 \
+	--LR=0.00245 \
+	--MILESTONES=6,8 \
+	--MAX_EPOCHS=10
 
