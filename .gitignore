@@ -1,11 +1,10 @@
-/data/road/instance_counts.json
-/data/road/road_trainval_v1.0.json
-/data/road/videos
-/data/road/rgb-images
-/data/road/cache
-/data/road/cache.bak
-/data/road/videos.zip
-/data/kinetics-pt/*.pth
+/scripts/road-data/instance_counts.json
+/scripts/road-data/road_trainval_v1.0.json
+/scripts/road-data/videos
+/scripts/road-data/rgb-images
+/scripts/road-data/cache
+/scripts/road-data/videos.zip
+/scripts/kinetics-pt/*.pth
 
 /logs/*
 !/logs/.gitkeep
@@ -13,3 +12,32 @@
 !/output/.gitkeep
 
 /tmp
+
+*.bak
+
+# Created by https://www.toptal.com/developers/gitignore/api/vim
+# Edit at https://www.toptal.com/developers/gitignore?templates=vim
+
+### Vim ###
+# Swap
+[._]*.s[a-v][a-z]
+!*.svg  # comment out if you don't need vector files
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+
+# Session
+Session.vim
+Sessionx.vim
+
+# Temporary
+.netrwhist
+*~
+# Auto-generated tag files
+tags
+# Persistent undo
+[._]*.un~
+
+# End of https://www.toptal.com/developers/gitignore/api/vim
+
