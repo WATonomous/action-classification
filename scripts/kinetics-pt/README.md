@@ -5,5 +5,5 @@ This folder contains a script to get the Kinetics Pre-Trained Weights. The scrip
 ## Getting started
 
 ```bash
-./get_kinetics_weights.sh
+./get_kinetics_weights.sh <download_dir>
 ```
