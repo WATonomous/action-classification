@@ -13,7 +13,7 @@
 
 VENV_DIR=${SLURM_TMRDIR:-./tmp}/venv
 
-if command -v COMMAND &> /dev/null; then
+if command -v module &> /dev/null; then
 	IS_COMPUTE_CANADA=true
 	echo "Running job on Compute Canada"
 else
