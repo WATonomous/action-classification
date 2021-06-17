@@ -1,12 +1,11 @@
 # https://github.com/gurkirt/road-dataset/blob/5eee122c42830807ff6bd7cb12d0252b63ece0bc/extract_videos2jpgs.py
 
-import  os
+import os
 import argparse
 
-def main(vidname, videos_dir, outdir):
+def main(video_file, outdir):
 
-    base_name = vidname.split('.mp4')[0]
-    video_file = os.path.join(videos_dir, vidname)
+    base_name = os.path.basename(video_file)
 
     images_dir = os.path.join(outdir, base_name)
     
@@ -31,15 +30,13 @@ def main(vidname, videos_dir, outdir):
 if __name__ == '__main__':
 
     p = argparse.ArgumentParser(description='extract frame from videos')
-    p.add_argument('data_dir', type=str,
-                   help='Video directory where videos are saved.')
+    p.add_argument('--outdir', type=str, help='Output directory (images will be put here).')
+    p.add_argument('--files', nargs='+', type=str, default=[],
+        help='Paths to video files.')
+
     args = p.parse_args()
-    videos_dir = os.path.join(args.data_dir, 'videos')
-    videofiles = os.listdir(videos_dir)
-    videofiles = [af for af in videofiles if af.endswith('.mp4')]
-    images_dir = os.path.join(args.data_dir, 'rgb-images')
-    print('NUMBER OF VIDEO FILES are:::>', len(videofiles))
-    for i, videofile in enumerate(videofiles):
-            print('\n %d videofile '%i, videofile, '\n')
-            main(videofile, videos_dir, images_dir)
+    print(f'Processing {len(args.files)} files')
+    for i, videofile in enumerate(args.files):
+            print(f'videofile {i}: {videofile}')
+            main(videofile, args.outdir)
 
