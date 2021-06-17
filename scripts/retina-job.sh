@@ -2,14 +2,29 @@
 #SBATCH --gres=gpu:v100:4
 #SBATCH --cpus-per-task=3
 #SBATCH --mem=12G
-#SBATCH --time=1-00:00:00
+#SBATCH --time=0-23:00:00
 #SBATCH --output=logs/%x-%j.out
 
 # This script assumes that the data is already downloaded and preprocessed
 # See the 3D-RetinaNet repo for instructions
 
+if [ -n $SCRIPT_DIR ]; then
+	# Some other job already set SCRIPT_DIR, update it to the dir of the current script
+	SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+else
+	# No other jobs have set the SCRIPT_DIR
+	if [ -n $SLURM_JOB_ID ];  then
+	    # check the original location through scontrol and $SLURM_JOB_ID
+	    SCRIPT_PATH=$(scontrol show job $SLURM_JOBID | awk -F= '/Command=/{print $2}')
+	else
+	    # otherwise: started with bash. Get the real location.
+	    SCRIPT_PATH=$(realpath $0)
+	fi
+	SCRIPT_DIR=`dirname "$SCRIPT_PATH"`
+fi
+
 # Print system info
-./sys-info.sh
+${SCRIPT_DIR}/sys-info.sh
 
 BATCH_SIZE=${BATCH_SIZE:-4}
 
@@ -25,7 +40,7 @@ fi
 if [ "$IS_COMPUTE_CANADA" = "true" ]; then
 	module load python/3
 fi
-VENV_DIR=${SLURM_TMRDIR:-./tmp}/venv
+VENV_DIR=${SLURM_TMPDIR:-./tmp}/venv
 echo "VENV_DIR: $VENV_DIR"
 virtualenv --no-download $VENV_DIR
 source $VENV_DIR/bin/activate
