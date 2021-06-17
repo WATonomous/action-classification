@@ -11,14 +11,24 @@
 # print system info
 ./sys-info.sh
 
-VENV_DIR=${SLURM_TMRDIR:-/tmp}/venv
+VENV_DIR=${SLURM_TMRDIR:-./tmp}/venv
 
-module load python/3
+IS_COMPUTE_CANADA=$(command -v module &> /dev/null)
+
+if $IS_COMPUTE_CANADA; then
+	module load python/3
+fi
 virtualenv --no-download $VENV_DIR
 source $VENV_DIR/bin/activate
-pip install --no-index  torch torchvision tensorflow tensorboard tensorboardx numpy scipy pandas matplotlib
 
-python 3D-RetinaNet/main.py \
+if $IS_COMPUTE_CANADA; then
+	pip3 install --no-index  torch torchvision tensorflow tensorboard tensorboardx numpy scipy pandas matplotlib
+else
+	pip3 install torch==1.8.1+cu111 torchvision==0.9.1+cu111 torchaudio==0.8.1 -f https://download.pytorch.org/whl/lts/1.8/torch_lts.html
+	pip3 install tensorflow tensorboard tensorboardx numpy scipy pandas matplotlib
+fi
+
+python3 3D-RetinaNet/main.py \
 	./data/ \
 	./output/ \
 	./data/kinetics-pt/ \
