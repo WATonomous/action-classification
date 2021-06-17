@@ -13,15 +13,21 @@
 
 VENV_DIR=${SLURM_TMRDIR:-./tmp}/venv
 
-IS_COMPUTE_CANADA=$(command -v module &> /dev/null)
+if command -v COMMAND &> /dev/null; then
+	IS_COMPUTE_CANADA=true
+	echo "Running job on Compute Canada"
+else
+	IS_COMPUTE_CANADA=false
+	echo "Not running job on Compute Canada"
+fi
 
-if $IS_COMPUTE_CANADA; then
+if [ "$IS_COMPUTE_CANADA" = "true" ]; then
 	module load python/3
 fi
 virtualenv --no-download $VENV_DIR
 source $VENV_DIR/bin/activate
 
-if $IS_COMPUTE_CANADA; then
+if [ "$IS_COMPUTE_CANADA" = "true" ]; then
 	pip3 install --no-index  torch torchvision tensorflow tensorboard tensorboardx numpy scipy pandas matplotlib
 else
 	pip3 install torch==1.8.1+cu111 torchvision==0.9.1+cu111 torchaudio==0.8.1 -f https://download.pytorch.org/whl/lts/1.8/torch_lts.html
