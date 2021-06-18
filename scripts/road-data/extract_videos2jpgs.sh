@@ -20,7 +20,7 @@ else
 	# Set the script directory normally.
         SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 fi
-# gather system info
+# print system info
 $SCRIPT_DIR/../sys-info.sh
 # ------------------------------------------------------------------------------------
 

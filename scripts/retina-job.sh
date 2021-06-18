@@ -8,23 +8,21 @@
 # This script assumes that the data is already downloaded and preprocessed
 # See the 3D-RetinaNet repo for instructions
 
-if [ -n $SCRIPT_DIR ]; then
-	# Some other job already set SCRIPT_DIR, update it to the dir of the current script
-	SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+# Common header to get the directory of the script -----------------------------------
+if [ -z "$SCRIPT_DIR" ] && [ -n "$SLURM_JOB_ID" ]; then
+	# No other script has set SCRIPT_DIR and we are on slurm (i.e. we are
+	# the entry script on slurm).
+	# Check the original location through scontrol and $SLURM_JOB_ID
+	SCRIPT_PATH=$(scontrol show job $SLURM_JOBID | awk -F= '/Command=/{print $2}')
+        SCRIPT_DIR=`dirname "$SCRIPT_PATH"`
 else
-	# No other jobs have set the SCRIPT_DIR
-	if [ -n $SLURM_JOB_ID ];  then
-	    # check the original location through scontrol and $SLURM_JOB_ID
-	    SCRIPT_PATH=$(scontrol show job $SLURM_JOBID | awk -F= '/Command=/{print $2}')
-	else
-	    # otherwise: started with bash. Get the real location.
-	    SCRIPT_PATH=$(realpath $0)
-	fi
-	SCRIPT_DIR=`dirname "$SCRIPT_PATH"`
+        # Some other job already set SCRIPT_DIR or we are not on slurm.
+	# Set the script directory normally.
+        SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 fi
-
-# Print system info
-${SCRIPT_DIR}/sys-info.sh
+# print system info
+$SCRIPT_DIR/../sys-info.sh
+# ------------------------------------------------------------------------------------
 
 BATCH_SIZE=${BATCH_SIZE:-4}
 
