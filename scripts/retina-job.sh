@@ -40,7 +40,8 @@ fi
 if [ "$IS_COMPUTE_CANADA" = "true" ]; then
 	module load python/3
 fi
-VENV_DIR=${SLURM_TMPDIR:-./tmp}/venv
+TMPDIR="${SLURM_TMPDIR:-./tmp}"
+VENV_DIR="$TMPDIR/venv"
 echo "VENV_DIR: $VENV_DIR"
 virtualenv --no-download $VENV_DIR
 source $VENV_DIR/bin/activate
@@ -52,17 +53,28 @@ else
 	pip3 install tensorflow tensorboard tensorboardx numpy scipy pandas matplotlib
 fi
 
-# Evaluate default directories
-if [ -z $DATA_DIR ]; then
+# if DATA_DIR and DATA_TAR are unset, auto-discover
+if [ -z "$DATA_DIR" ] && [ -z "$DATA_TAR" ]; then
 	if [ -d "../../data/road" ]; then
 		DATA_DIR="../../data/"
+		echo "Using DATA_DIR=$DATA_DIR"
+	elif [ -f "../../data/road.tar" ]; then
+		DATA_TAR="../../data/road.tar"
 	else
-		>&2 echo "The DATA_DIR environment variable must be set!"
+		>&2 echo "The DATA_DIR or DATA_TAR environment variable must be set!"
 		exit 1
 	fi
 fi
 
-if [ -z $PT_DIR ]; then
+# if DATA_DIR doesn't exist and DATA_TAR does, extract DATA_TAR
+if [ -z "$DATA_DIR" ] && [ -n "$DATA_TAR" ]; then
+		echo "Extracting DATA_TAR $DATA_TAR"
+		tar -xf road.tar -C "$TMPDIR"
+		DATA_DIR="$TMPDIR/"
+fi
+
+# if PT_DIR is unset, auto-discover
+if [ -z "$PT_DIR" ]; then
 	if [ -d "../../data/kinetics-pt" ]; then
 		PT_DIR="../../data/kinetics-pt/"
 	else
@@ -71,7 +83,11 @@ if [ -z $PT_DIR ]; then
 	fi
 fi
 
-OUTPUT_DIR=${OUTPUT_DIR:-./output/}
+if [ "$IS_COMPUTE_CANADA" = "true" ]; then
+	OUTPUT_DIR=${OUTPUT_DIR:-./output/$SLURM_JOB_ID}
+else
+	OUTPUT_DIR=${OUTPUT_DIR:-./output/`date +"%FT%H%M%z"`}
+fi
 
 # Ensure directories exist
 if [ ! -d "$DATA_DIR" ]; then
@@ -82,7 +98,6 @@ if [ ! -d "$PT_DIR" ]; then
 	>&2 echo "The PT_DIR ($PT_DIR) directory must be present!"
 	exit 1
 fi
-
 if [ ! -d "$OUTPUT_DIR" ]; then
 	>&2 echo "The OUTPUT_DIR ($OUTPUT_DIR) directory must be present!"
 	exit 1
