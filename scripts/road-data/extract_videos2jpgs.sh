@@ -2,7 +2,7 @@
 #SBATCH --time=0-0:10:00
 #SBATCH --cpus-per-task=3
 #SBATCH --mem-per-cpu=1G
-#SBATCH --output=logs/%x-%j.out
+#SBATCH --output=logs/%x-%A-%a.out
 
 # Script to extract videos into jpgs
 # usage example (Compute Canada):

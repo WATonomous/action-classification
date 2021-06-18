@@ -5,9 +5,9 @@ import argparse
 
 def main(video_file, outdir):
 
-    base_name = os.path.basename(video_file)
+    video_name = os.path.splitext(os.path.basename(video_file))[0]
 
-    images_dir = os.path.join(outdir, base_name)
+    images_dir = os.path.join(outdir, video_name)
     
     if not os.path.isdir(images_dir):
         os.makedirs(images_dir)
