@@ -67,7 +67,7 @@ fi
 # if DATA_DIR doesn't exist and DATA_TAR does, extract DATA_TAR
 if [ -z "$DATA_DIR" ] && [ -n "$DATA_TAR" ]; then
 		echo "Extracting DATA_TAR $DATA_TAR"
-		tar -xf road.tar -C "$TMPDIR"
+		tar -xf $DATA_TAR -C "$TMPDIR"
 		DATA_DIR="$TMPDIR/"
 fi
 
@@ -86,6 +86,8 @@ if [ "$IS_COMPUTE_CANADA" = "true" ]; then
 else
 	OUTPUT_DIR=${OUTPUT_DIR:-./output/`date +"%FT%H%M%z"`}
 fi
+
+mkdir -p $OUTPUT_DIR
 
 # Ensure directories exist
 if [ ! -d "$DATA_DIR" ]; then
