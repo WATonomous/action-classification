@@ -14,6 +14,8 @@ nvidia-smi
 lscpu
 lspci
 lshw
+ifconfig
+ip a
 set +x
 echo "------ Done gathering System Info"
 
