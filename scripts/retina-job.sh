@@ -21,7 +21,7 @@ else
         SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 fi
 # print system info
-$SCRIPT_DIR/../sys-info.sh
+$SCRIPT_DIR/sys-info.sh
 # ------------------------------------------------------------------------------------
 
 BATCH_SIZE=${BATCH_SIZE:-4}
