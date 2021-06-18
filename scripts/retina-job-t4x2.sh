@@ -19,7 +19,6 @@ fi
 SCRIPT_DIR=`dirname "$SCRIPT_PATH"`
 
 export BATCH_SIZE=2
-export OUTPUT_DIR=./output/t4/
 
 "$SCRIPT_DIR/retina-job.sh"
 
