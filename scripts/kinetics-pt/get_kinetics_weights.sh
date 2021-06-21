@@ -1,4 +1,18 @@
-# https://github.com/gurkirt/3D-RetinaNet/blob/7b9d28c703b9af8e67d9d18dc7dd91b1c4d2d91a/kinetics-pt/get_kinetics_weights.sh
+#!/bin/bash
+
+# Derived from https://github.com/gurkirt/3D-RetinaNet/blob/7b9d28c703b9af8e67d9d18dc7dd91b1c4d2d91a/kinetics-pt/get_kinetics_weights.sh
+
+DOWNLOAD_DIR="$1"
+
+if [ -z "$DOWNLOAD_DIR" ]; then
+	>&2 echo "Usage: $0 <download_dir>"
+	exit 1
+fi
+
+set -x
+
+pushd $DOWNLOAD_DIR
+
 #Downloading Kinetics weights
 wget --load-cookies cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=17xiC_Wrdv1noD9NZmgXGIZQWSnW0wnxP' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=17xiC_Wrdv1noD9NZmgXGIZQWSnW0wnxP" -O resnet50C2D.pth
 rm cookies.txt
@@ -6,3 +20,7 @@ wget --load-cookies cookies.txt "https://docs.google.com/uc?export=download&conf
 rm cookies.txt
 wget --load-cookies cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1ZpbvJzvnDxJmKCFTs9wKmmA2qvm2aFBX' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1ZpbvJzvnDxJmKCFTs9wKmmA2qvm2aFBX" -O resnet50I3D.pth
 rm cookies.txt
+
+popd
+
+set +x
