@@ -82,7 +82,7 @@ if [ -z "$PT_DIR" ]; then
 fi
 
 if [ "$IS_COMPUTE_CANADA" = "true" ]; then
-	OUTPUT_DIR=${OUTPUT_DIR:-./output/$SLURM_JOB_ID-${SLURM_JOB_NAME%.*}}
+	OUTPUT_DIR=${OUTPUT_DIR:-./output/`date +"%FT%H%M%z"`-$SLURM_JOB_ID-${SLURM_JOB_NAME%.*}}
 else
 	OUTPUT_DIR=${OUTPUT_DIR:-./output/`date +"%FT%H%M%z"`}
 fi
