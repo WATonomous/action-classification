@@ -13,8 +13,6 @@ RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 RUN pip install \  
 	numpy \
-	torch \
-	torchvision \
 	simplejson \
 	PyYAML \
 	psutil \
@@ -30,9 +28,10 @@ RUN pip install \
         av \
 	ffmpeg \
 	moviepy \
-	pytorchvideo \
-	'iopath>=0.1.7' \
+	'iopath<0.1.9,>=0.1.7' \
 	'tqdm>=4.29.0'
+
+RUN pip install --pre 'torch==1.10.0.dev20210629+cu111' torchvision pytorchvideo -f https://download.pytorch.org/whl/nightly/cu111/torch_nightly.html
 
 RUN pip install \
 	'git+https://github.com/facebookresearch/fvcore' \
