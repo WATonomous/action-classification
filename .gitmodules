@@ -3,4 +3,4 @@
 	url = https://github.com/gurkirt/3D-RetinaNet.git
 [submodule "SlowFast"]
 	path = SlowFast
-	url = https://github.com/facebookresearch/SlowFast.git
+	url = ist-git@git.uwaterloo.ca:WATonomous/slowfast.git
