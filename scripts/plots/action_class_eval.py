@@ -2,10 +2,6 @@ import matplotlib.pyplot as pyplot
 import json
 import numpy as np
 
-slowfast_ffw_sratch = [1,2,3,4,5]
-slowfast_ffw_pretrain = [5,6,7]
-slowfast_acar_pretrain = [7,8,9,10,11]
-
 def parse_slowfast(fh):
     rets = []
     for line in fh:
