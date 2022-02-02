@@ -11,6 +11,9 @@
 /output/*
 !/output/.gitkeep
 
+/data/**/*.log
+/data/**/*.out
+
 /tmp
 
 *.bak

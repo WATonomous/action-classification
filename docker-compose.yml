@@ -1,0 +1,37 @@
+version: "3.9"
+services:
+  slowfast:
+    build:
+      context: .
+      dockerfile: slowfast.Dockerfile  
+    image: git.uwaterloo.ca:5050/watonomous/road-dataset/slowfast
+    volumes:
+      - /mnt/wato-drive/road:/road
+      - ./SlowFast:/project/SlowFast
+    ipc: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            device_ids: ['1'] # Change to ['0', '1'] to use two GPUs
+            capabilities: [gpu]
+
+  acar:
+    build:
+      context: .
+      dockerfile: acar.Dockerfile
+    image: git.uwaterloo.ca:5050/watonomous/road-dataset/acar
+    volumes:
+      - /mnt/wato-drive/road:/road
+      - ./ACAR-Net:/project/ACAR-Net
+    ipc: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            device_ids: ['1'] # Change to ['0', '1'] to use two GPUs
+            capabilities: [gpu]
+
+
