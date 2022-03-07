@@ -44,3 +44,6 @@ tags
 
 # End of https://www.toptal.com/developers/gitignore/api/vim
 
+ACAR-Net/experiments/*
+ACAR-Net/experiments2/*
+*experiments*

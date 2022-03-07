@@ -31,6 +31,8 @@ RUN pip install \
         av \
 	ffmpeg \
 	moviepy \
+	ipykernel \
+	jupyter \
 	'iopath<0.1.9,>=0.1.7' \
 	'tqdm>=4.29.0'
 

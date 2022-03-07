@@ -14,7 +14,7 @@ services:
         reservations:
           devices:
           - driver: nvidia
-            device_ids: ['0'] # Change to ['0', '1'] to use two GPUs
+            device_ids: ['1'] # Change to ['0', '1'] to use two GPUs
             capabilities: [gpu]
 
   acar:
@@ -22,17 +22,22 @@ services:
       context: .
       dockerfile: acar.Dockerfile
     image: git.uwaterloo.ca:5050/watonomous/road-dataset/acar
+    # entrypoint: tensorboard --logdir /project/ACAR-Net/experiments2/ROAD/correct_heads/tb --bind_all
+    # entrypoint: /bin/bash
+
     volumes:
       - /mnt/wato-drive/road:/road
       - ./ACAR-Net:/project/ACAR-Net
     ipc: host
     tty: true
+    ports:
+      - "8082:22"
+      - "8083:6006"
+      - "8084:8080"
     deploy:
       resources:
         reservations:
           devices:
           - driver: nvidia
-            device_ids: ['0'] # Change to ['0', '1'] to use two GPUs
+            device_ids: ['1'] # Change to ['0', '1'] to use two GPUs
             capabilities: [gpu]
-
-
