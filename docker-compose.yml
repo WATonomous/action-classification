@@ -4,7 +4,7 @@ services:
     build:
       context: .
       dockerfile: slowfast.Dockerfile  
-    image: git.uwaterloo.ca:5050/watonomous/road-dataset/slowfast
+    image: git.uwaterloo.ca:5050/watonomous/registry/action-classification/slowfast
     volumes:
       - /mnt/wato-drive/road:/road
       - ./SlowFast:/project/SlowFast
@@ -21,7 +21,7 @@ services:
     build:
       context: .
       dockerfile: acar.Dockerfile
-    image: git.uwaterloo.ca:5050/watonomous/road-dataset/acar
+    image: git.uwaterloo.ca:5050/watonomous/registry/action-classification/acar
     volumes:
       - /mnt/wato-drive/road:/road
       - ./ACAR-Net:/project/ACAR-Net
