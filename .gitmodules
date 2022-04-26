@@ -1,9 +1,0 @@
-[submodule "3D-RetinaNet"]
-	path = 3D-RetinaNet
-	url = https://github.com/gurkirt/3D-RetinaNet.git
-[submodule "SlowFast"]
-	path = SlowFast
-	url = ist-git@git.uwaterloo.ca:WATonomous/slowfast.git
-[submodule "ACAR-Net"]
-	path = ACAR-Net
-	url = ist-git@git.uwaterloo.ca:WATonomous/acar-net.git
