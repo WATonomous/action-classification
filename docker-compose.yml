@@ -1,21 +1,21 @@
 version: "3.9"
 services:
-  slowfast:
-    build:
-      context: .
-      dockerfile: slowfast.Dockerfile  
-    image: git.uwaterloo.ca:5050/watonomous/registry/action-classification/slowfast
-    volumes:
-      - /mnt/wato-drive/road:/road
-      - ./SlowFast:/project/SlowFast
-    ipc: host
-    deploy:
-      resources:
-        reservations:
-          devices:
-          - driver: nvidia
-            device_ids: ['0'] # Change to ['0', '1'] to use two GPUs
-            capabilities: [gpu]
+  # slowfast:
+  #   build:
+  #     context: .
+  #     dockerfile: slowfast.Dockerfile  
+  #   image: git.uwaterloo.ca:5050/watonomous/registry/action-classification/slowfast
+  #   volumes:
+  #     - /mnt/wato-drive/road:/road
+  #     - ./SlowFast:/project/SlowFast
+  #   ipc: host
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #         - driver: nvidia
+  #           device_ids: ['0'] # Change to ['0', '1'] to use two GPUs
+  #           capabilities: [gpu]
 
   acar:
     build:
