@@ -1,6 +1,8 @@
 FROM pure/python:3.8-cuda10.2-base
 WORKDIR /project
 
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys A4B469963BF863CC
+
 RUN apt-get update && apt-get upgrade -y \
  && apt-get install -y \
     gcc \
