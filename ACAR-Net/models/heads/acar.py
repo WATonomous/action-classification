@@ -78,6 +78,10 @@ class ACARHead(nn.Module):
 
     # data: features, rois, num_rois, roi_ids, sizes_before_padding
     # returns: outputs
+    # TODO remove initial temporal pooling and accomodate more rois
+        # feats[0] is the slow [8, 2048, 8, 16, 22]
+        # feats[1] is the fast [8, 256, 32, 16, 22]
+    # TODO change the number of rois coming into this forward function. each roi will be a list of rois
     def forward(self, data):
         if not isinstance(data['features'], list):
             feats = [data['features']]
