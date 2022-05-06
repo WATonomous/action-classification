@@ -5,13 +5,21 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
+            "name": "Full Model",
             "type": "python",
             "request": "launch",
             "program": "main.py",
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": ["--config", "configs/ROAD/SLOWFAST_R50_ACAR_HR2O.yaml", "--nproc_per_node", "1"]
+        },
+        {
+            "name": "Probe",
+            "type": "python",
+            "request": "launch",
+            "program": "models/testspace.py",
+            "console": "integratedTerminal",
+            "justMyCode": true
         }
     ]
 }

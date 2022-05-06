@@ -27,6 +27,13 @@ class TestModel(nn.Module):
 
         return o_h['outputs']
 
+    def forward_neck(self, data):
+        i_n = {'aug_info': data['aug_info'], 'labels': data['labels'], 
+                   'filenames': data['filenames'], 'mid_times': data['mid_times']}
+        o_n = self.neck(i_n)
+
+        return o_n
+
 if __name__ == '__main__':
     # load config
     with open(os.path.join('/project/ACAR-Net/configs/ROAD/SLOWFAST_R50_ACAR_HR2O.yaml')) as f:
@@ -41,7 +48,7 @@ if __name__ == '__main__':
         'features': [torch.rand(8, 2048, 8, 16, 22), torch.rand(8, 256, 32, 16, 22)]
     }
     o_n = {
-        'rois': torch.rand(42, 5),
+        'rois': torch.rand(42, 32, 5),
         'num_rois': 42,
         'roi_ids': [0, 3, 9, 17, 25, 31, 33, 38, 42],
         'sizes_before_padding': [[1.0, 1.0], [1.0, 1.0], [1.0, 1.0], [1.0, 1.0], [1.0, 1.0], [1.0, 1.0], [1.0, 1.0], [1.0, 1.0]],

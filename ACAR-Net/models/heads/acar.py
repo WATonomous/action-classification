@@ -81,30 +81,78 @@ class ACARHead(nn.Module):
     # TODO remove initial temporal pooling and accomodate more rois
         # feats[0] is the slow [8, 2048, 8, 16, 22]
         # feats[1] is the fast [8, 256, 32, 16, 22]
-    # TODO change the number of rois coming into this forward function. each roi will be a list of rois
+    # TODO change the number of rois coming into this forward function. each roi will be a list of rois [[rois], [rois], ...]
     def forward(self, data):
         if not isinstance(data['features'], list):
             feats = [data['features']]
         else:
             feats = data['features']
-        
-        # temporal average pooling
+
+        # coming in rois must be [42, N_f(in this case =32), 5]
+
+        # ROI Alignment with multiple box priors
         h, w = feats[0].shape[3:]
+        roi_slow_feats = []
+        roi_fast_feats = []
+
+        # for each temporal slow encoding, roi align
+        alpha = int(feats[1].shape[2] / feats[0].shape[2])
+        sample_idx = 0
+        for idx in range(feats[0].shape[2]):
+            f_s = feats[0][:, :, idx]
+            sample_idx += alpha
+            rois = data['rois'][:, sample_idx - 1] # roi for every alpha frame
+        
+            roi_slow_feats.append(self.head_roi_align(rois, f_s, h, w))
+
+        # for each temporal fast encoding, roi align
+        sample_idx = 0
+        for idx in range(feats[1].shape[2]):
+            f_f = feats[1][:, :, idx]
+            rois = data['rois'][:, sample_idx] # roi for every frame
+
+            roi_fast_feats.append(self.head_roi_align(rois, f_f, h, w))
+            sample_idx += 1
+
+        # pool fast and slow roi alignments
+        roi_slow_feats = torch.stack(roi_slow_feats, dim=0)
+        roi_fast_feats = torch.stack(roi_fast_feats, dim=0)
+
+        roi_slow_feats = nn.AdaptiveAvgPool3d((1, self.roi_spatial, self.roi_spatial))(roi_slow_feats).view(-1, roi_slow_feats.shape[1], self.roi_spatial, self.roi_spatial)
+        roi_fast_feats = nn.AdaptiveAvgPool3d((1, h, w))(roi_fast_feats).view(-1, roi_fast_feats.shape[1], h, w)
+        # concatenate and reduce the slow and fast roi_feats
+        roi_feats = torch.cat([roi_slow_feats, roi_fast_feats], dim=1)
+        roi_feats = self.conv_reduce(feats)
+
+        # roi maxpool
+        roi_feats = self.roi_maxpool(roi_feats).view(data['num_rois'], -1)
+
+        # temporal average pooling for later tiling
         # requires all features have the same spatial dimensions
         feats = [nn.AdaptiveAvgPool3d((1, h, w))(f).view(-1, f.shape[1], h, w) for f in feats]
         feats = torch.cat(feats, dim=1)
+        
+        # # temporal average pooling
+        # h, w = feats[0].shape[3:]
+        # # requires all features have the same spatial dimensions
+        # feats = [nn.AdaptiveAvgPool3d((1, h, w))(f).view(-1, f.shape[1], h, w) for f in feats]
+        # feats = torch.cat(feats, dim=1)
 
-        feats = self.conv_reduce(feats)
+        # feats = self.conv_reduce(feats)
 
-        rois = data['rois']
-        rois[:, 1] = rois[:, 1] * w
-        rois[:, 2] = rois[:, 2] * h
-        rois[:, 3] = rois[:, 3] * w
-        rois[:, 4] = rois[:, 4] * h
-        rois = rois.detach()
-        roi_feats = torchvision.ops.roi_align(feats, rois, (self.roi_spatial, self.roi_spatial))
-        roi_feats = self.roi_maxpool(roi_feats).view(data['num_rois'], -1)
+        # rois = data['rois']
+        # rois[:, 1] = rois[:, 1] * w
+        # rois[:, 2] = rois[:, 2] * h
+        # rois[:, 3] = rois[:, 3] * w
+        # rois[:, 4] = rois[:, 4] * h
+        # rois = rois.detach()
+        # roi_feats = torchvision.ops.roi_align(feats, rois, (self.roi_spatial, self.roi_spatial))
+        # roi_feats = self.roi_maxpool(roi_feats).view(data['num_rois'], -1)
 
+        # roi feats is [42, 1024], this is what needs to be passed into the downstream tiling
+        # feats is [8, 1024, 16, 22]
+        
+        # downstream tiling
         roi_ids = data['roi_ids']
         sizes_before_padding = data['sizes_before_padding']
         high_order_feats = []
@@ -143,6 +191,15 @@ class ACARHead(nn.Module):
 
         return {'outputs': outputs}
 
+    def head_roi_align(self, rois, frame, h, w):
+        rois[:, 1] = rois[:, 1] * w
+        rois[:, 2] = rois[:, 2] * h
+        rois[:, 3] = rois[:, 3] * w
+        rois[:, 4] = rois[:, 4] * h
+
+        rois = rois.detach()
+
+        return torchvision.ops.roi_align(frame, rois, (self.roi_spatial, self.roi_spatial))
 
 def acar(**kwargs):
     model = ACARHead(**kwargs)
