@@ -1,6 +1,6 @@
 evaluate: True
-result_path: /mnt/wato-drive/exp/SLOWFAST_R50_ACAR_HR20_eval/
-tensorboard_path: /mnt/wato-drive/exp/SLOWFAST_R50_ACAR_HR20_eval/tensorboard
+result_path: /exp/SLOWFAST_R50_ACAR_HR20_eval/text
+tensorboard_path: /exp/SLOWFAST_R50_ACAR_HR20_eval/tensorboard
 model_path:
 resume_path:
 manual_seed: 1
