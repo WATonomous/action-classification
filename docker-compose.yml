@@ -24,7 +24,8 @@ services:
     image: git.uwaterloo.ca:5050/watonomous/registry/action-classification/acar
     volumes:
       - /mnt/wato-drive/road:/road
-      - ./ACAR-Net:/project/ACAR-Net
+      - /mnt/wato-drive/exp:/exp
+      - ./:/project/action-classification
     ipc: host
     tty: true
     deploy:
