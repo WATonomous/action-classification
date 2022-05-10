@@ -1,0 +1,18 @@
+schema: '2.0'
+stages:
+  main:
+    cmd: python3 ACAR-Net/main.py --config ACAR-Net/configs/ROAD/config.yaml --nproc_per_node
+      1
+    deps:
+    - path: ACAR-Net/configs/ROAD/config.yaml
+      md5: 5d72700f5bc738349332e9afcd302132
+      size: 3196
+      isexec: true
+    - path: ACAR-Net/main.py
+      md5: 6efb08e6c0dee03afeaa6c663d92bc25
+      size: 20771
+    outs:
+    - path: output
+      md5: 0375be5716e5d3ba85265bd27c4ceee3.dir
+      size: 196858412
+      nfiles: 6

@@ -4,6 +4,8 @@ from .basic import *
 
 
 def model_entry(config):
+    # globals() returns a dictionary of globals
+    # index into the "type" of model (i.e. basic) which is imported above
     return globals()[config['type']](**config['kwargs'])
 
 

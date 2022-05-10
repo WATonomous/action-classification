@@ -55,9 +55,9 @@ def main(local_rank, args):
         # only the first node should create the paths, setup loggers for this parallel experiment
         mkdir(opt.result_path)
         mkdir(os.path.join(opt.result_path, 'tmp'))
-        with open(os.path.join(opt.result_path, f'opts_{opt.experiment_name}.json'), 'w') as opt_file:
+        with open(os.path.join(opt.result_path, f'opts.json'), 'w') as opt_file:
             json.dump(vars(opt), opt_file, indent=2)
-        logger = create_logger(os.path.join(opt.result_path, f'log_{opt.experiment_name}.txt'))
+        logger = create_logger(os.path.join(opt.result_path, f'log.txt'))
         logger.info('opt: {}'.format(pprint.pformat(opt, indent=2)))
         
         writer = SummaryWriter(opt.tensorboard_path)
@@ -87,7 +87,7 @@ def main(local_rank, args):
         logger.info(parameters_string(net))
 
     if not opt.get('evaluate', False):
-        # if this is not a pure evaluation run
+        # if this is a training run
 
         # train_aug is a dict of configs for augmentation pipeline
         train_aug = opt.train.augmentation
@@ -138,10 +138,10 @@ def main(local_rank, args):
             logger.info('train temporal aug: {}'.format(temporal_transform))
 
             train_logger = Logger(
-                os.path.join(opt.result_path, f'train_{opt.experiment_name}.log'),
+                os.path.join(opt.result_path, f'train.log'),
                 ['epoch', 'loss', 'lr'])
             train_batch_logger = Logger(
-                os.path.join(opt.result_path, f'train_batch_{opt.experiment_name}.log'),
+                os.path.join(opt.result_path, f'train_batch.log'),
                 ['epoch', 'batch', 'iter', 'loss', 'lr'])
         else:
             train_logger = train_batch_logger = None
@@ -221,7 +221,7 @@ def main(local_rank, args):
             val_log_items.append('mAP')
         if len(val_log_items) > 1:
             val_logger = Logger(
-                os.path.join(opt.result_path, f'val_{opt.experiment_name}.log'),
+                os.path.join(opt.result_path, f'val.log'),
                 val_log_items)
     
     if opt.get('pretrain', None) is not None:
@@ -419,7 +419,7 @@ def val_epoch(epoch, data_loader, model, criterion, act_func,
     calc_loss = opt.val.with_label
     save_pred = (opt.val.get('eval_mAP', None) is not None)
     if save_pred:
-        out_file = open(os.path.join(opt.result_path, 'tmp', f'predict_rank_{rank}_{opt.experiment_name}.csv'), 'w')
+        out_file = open(os.path.join(opt.result_path, 'tmp', f'predict_rank_{rank}.csv'), 'w')
     
     batch_time = AverageMeter(opt.print_freq)
     data_time = AverageMeter(opt.print_freq)
@@ -501,10 +501,10 @@ def val_epoch(epoch, data_loader, model, criterion, act_func,
             val_str += '\tLoss {:.4f}'.format(final_loss)
 
         if save_pred:
-            result_file = os.path.join(opt.result_path, f'predict_epoch_{epoch}_{opt.experiment_name}.csv'%epoch)
+            result_file = os.path.join(opt.result_path, f'predict_epoch_{epoch}.csv')
             with open(result_file, 'w') as of:
                 for r in range(world_size):
-                    with open(os.path.join(opt.result_path, 'tmp', f'predict_rank_{r}_{opt.experiment_name}.csv'), 'r') as f:
+                    with open(os.path.join(opt.result_path, 'tmp', f'predict_rank_{r}.csv'), 'r') as f:
                         of.writelines(f.readlines())
 
             eval_mAP = opt.val.eval_mAP

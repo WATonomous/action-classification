@@ -1,12 +1,12 @@
 evaluate: True
-result_path: /exp/SLOWFAST_R50_ACAR_HR20_eval/text
-tensorboard_path: /exp/SLOWFAST_R50_ACAR_HR20_eval/tensorboard
-model_path:
-resume_path:
+result_path: ./output/text # same for any experiment in dvc world
+tensorboard_path: ./output/tensorboard
+model_path: # path to save model checkpoints during training
+resume_path: # model checkpoint to resume from
 manual_seed: 1
 print_freq: 20
 dataset: "road"
-experiment_name: "baseline"
+experiment_name: "baseline" # has no effect in dvc world
 
 class_list: ["Red", "Amber", "Green",
 "MovAway", "MovTow",
@@ -23,7 +23,7 @@ model:
         arch: slowfast50
         learnable: True
         pretrain:
-            path: /road/acar_models/SLOWFAST_R50_K400.pth.tar
+            path: /road/acar_models/SLOWFAST_R50_K400.pth.tar # base slowfast model.
         kwargs:
             alpha: 4
             beta: 0.125

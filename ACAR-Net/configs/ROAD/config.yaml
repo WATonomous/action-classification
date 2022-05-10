@@ -1,13 +1,11 @@
-# evaluate: True
-evaluate: False
-result_path: /home/agehlan/road-dataset/logs/text
-tensorboard_path: /home/agehlan/road-dataset/logs/tensorboard
-model_path: /home/agehlan/saved_models/thor_gpu1
-resume_path:
+evaluate: True #False 
+result_path: ./output/text # same for any experiment in dvc world
+tensorboard_path: ./output/tensorboard
+model_path: ./output/saved_models # where the model is saved
+resume_path: ckpt_9.pth.tar
 manual_seed: 1
 print_freq: 20
 dataset: "road"
-experiment_name: "baseline"
 
 class_list: ["Red", "Amber", "Green",
 "MovAway", "MovTow",
