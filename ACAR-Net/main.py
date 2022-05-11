@@ -65,7 +65,10 @@ def main(local_rank, args):
         
         if not opt.debug:
             # if we're debugging, don't log anything
-            wandb.init(project='acar', name = opt.experiment_name, sync_tensorboard=True)
+            if opt.experiment_name == "":
+                wandb.init(project='acar', sync_tensorboard=True)
+            else:
+                wandb.init(project='acar', name = opt.experiment_name, sync_tensorboard=True)
         writer = SummaryWriter(opt.tensorboard_path)
     else:
         logger = writer = None
