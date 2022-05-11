@@ -90,8 +90,6 @@ class Logger(object):
         self.logger.writerow(header)
         self.header = header
 
-        #self.metrics = defaultdict(int)
-
     def __del(self):
         self.log_file.close()
 
@@ -99,11 +97,7 @@ class Logger(object):
         write_values = []
         for col in self.header:
             assert col in values
-            write_values.append(values[col])
-            """
-            if not math.isnan(values[col]):
-                self.metrics[col] = max()"""
-            
+            write_values.append(values[col])            
 
         self.logger.writerow(write_values)
         self.log_file.flush()
