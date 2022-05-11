@@ -1,9 +1,0 @@
-stages:
-  main:
-    cmd: python3 ACAR-Net/main.py --config ACAR-Net/configs/ROAD/config.yaml --nproc_per_node
-      1
-    deps:
-    - ACAR-Net/configs/ROAD/config.yaml
-    - ACAR-Net/main.py
-    outs:
-    - output

@@ -8,6 +8,7 @@ import random
 import torch
 import torch.distributed as dist
 from torch.utils.data.sampler import Sampler
+from collections import defaultdict
 
 _LOGGER = None
 
@@ -81,13 +82,15 @@ def get_logger():
 
 
 class Logger(object):
-
+    
     def __init__(self, path, header):
         self.log_file = open(path, 'w')
         self.logger = csv.writer(self.log_file, delimiter='\t')
 
         self.logger.writerow(header)
         self.header = header
+
+        #self.metrics = defaultdict(int)
 
     def __del(self):
         self.log_file.close()
@@ -97,6 +100,10 @@ class Logger(object):
         for col in self.header:
             assert col in values
             write_values.append(values[col])
+            """
+            if not math.isnan(values[col]):
+                self.metrics[col] = max()"""
+            
 
         self.logger.writerow(write_values)
         self.log_file.flush()

@@ -32,7 +32,7 @@ RUN pip install \
 	sklearn \
 	Pillow \
         av \
-		dvc \
+	wandb\
 	ffmpeg \
 	moviepy \
 	'iopath<0.1.9,>=0.1.7' \
@@ -47,7 +47,7 @@ RUN pip install torch pytorchvideo torchvision
 RUN pip install torch==1.10.0+cu111 torchvision==0.11.0+cu111 pytorchvideo -f https://download.pytorch.org/whl/cu111/torch_stable.html
 
 RUN pip install easydict tensorboardx
-
+RUN wandb login 9b560c595c76ce65d70e4a61c9b5c0e3e0fb8750
 WORKDIR /project/action-classification
 
 # python3 ./main.py --config configs/ROAD/SLOWFAST_R50_ACAR_HR2O.yaml

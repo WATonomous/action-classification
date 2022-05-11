@@ -25,6 +25,7 @@ from scheduler import get_scheduler
 from utils import *
 
 import tensorboard_funcs
+import wandb
 
 def main(local_rank, args):
     """
@@ -48,8 +49,10 @@ def main(local_rank, args):
         config = yaml.load(f, Loader=yaml.FullLoader)
 
     # opt as in options are loaded from config files provided as argument.
-    opt = EasyDict(config) # TODO document config
+    opt = EasyDict(config)
     opt.world_size = world_size
+
+    
     
     if rank == 0:
         # only the first node should create the paths, setup loggers for this parallel experiment
@@ -60,6 +63,9 @@ def main(local_rank, args):
         logger = create_logger(os.path.join(opt.result_path, f'log.txt'))
         logger.info('opt: {}'.format(pprint.pformat(opt, indent=2)))
         
+        if not opt.debug:
+            # if we're debugging, don't log anything
+            wandb.init(project='acar', sync_tensorboard=True)
         writer = SummaryWriter(opt.tensorboard_path)
     else:
         logger = writer = None
@@ -265,6 +271,15 @@ def main(local_rank, args):
                           opt, logger, val_logger, rank, world_size, writer)
 
     if rank == 0:
+        if not opt.debug:
+            # finish() call must match init() call
+            results = wandb.Artifact(name = "results", type= "results", description = "results and config files")
+            ckpts = wandb.Artifact(name = "models", type = "models", description= "model checkpoints")
+            results.add_dir("./output/text")
+            ckpts.add_dir("./output/saved_models")
+            wandb.log_artifact(results)
+            wandb.log_artifact(ckpts)
+            wandb.finish()
         writer.close()
     
     
@@ -430,7 +445,12 @@ def val_epoch(epoch, data_loader, model, criterion, act_func,
     val_epoch_targets = torch.tensor([]).cpu()
 
     end_time = time.time()
-    for i, data in enumerate(data_loader):  
+    for i, data in enumerate(data_loader):
+
+        if opt.debug and i > 5:
+            # if we are debugging, shorten the run so it doesn't take that long.
+            break
+        
         data_time.update(time.time() - end_time)
 
         with torch.no_grad():
@@ -547,4 +567,9 @@ if __name__ == '__main__':
     parser.add_argument('--node_rank', type=int, default=None)
     args = parser.parse_args()
 
-    torch.multiprocessing.spawn(main, args=(args,), nprocs=args.nproc_per_node)
+    with open(args.config) as f:
+        config = yaml.load(f, Loader=yaml.FullLoader)
+    opt = EasyDict(config)
+    args.nproc_per_node = opt.nproc_per_node # hack to make the rest of the code work
+
+    torch.multiprocessing.spawn(main, args=(args,), nprocs=opt.nproc_per_node)

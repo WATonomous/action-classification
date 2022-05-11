@@ -2,10 +2,12 @@ evaluate: True #False
 result_path: ./output/text # same for any experiment in dvc world
 tensorboard_path: ./output/tensorboard
 model_path: ./output/saved_models # where the model is saved
-resume_path: ckpt_9.pth.tar
+resume_path: ckpt_6.pth.tar
 manual_seed: 1
 print_freq: 20
 dataset: "road"
+nproc_per_node: 1
+debug: False
 
 class_list: ["Red", "Amber", "Green",
 "MovAway", "MovTow",
