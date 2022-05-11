@@ -95,24 +95,23 @@ class ACARHead(nn.Module):
         roi_slow_feats = []
         roi_fast_feats = []
 
-        # for each temporal slow encoding, roi align
+        # for each temporal fast encoding, roi align
         alpha = int(feats[1].shape[2] / feats[0].shape[2])
         sample_idx = 0
-        for idx in range(feats[0].shape[2]):
-            f_s = feats[0][:, :, idx]
-            sample_idx += alpha
-            rois = data['rois'][:, sample_idx - 1] # roi for every alpha frame
-        
-            roi_slow_feats.append(self.head_roi_align(rois, f_s, h, w))
-
-        # for each temporal fast encoding, roi align
-        sample_idx = 0
         for idx in range(feats[1].shape[2]):
+            sample_idx += 1
+
+            if sample_idx % alpha is 0: # for each temporal slow encoding
+                f_s = feats[0][:, :, idx]
+                rois = data['rois'][:, sample_idx - 1] # roi for every alpha frame
+        
+                roi_slow_feats.append(self.head_roi_align(rois, f_s, h, w))
+
             f_f = feats[1][:, :, idx]
-            rois = data['rois'][:, sample_idx] # roi for every frame
+            rois = data['rois'][:, sample_idx - 1] # roi for every frame
 
             roi_fast_feats.append(self.head_roi_align(rois, f_f, h, w))
-            sample_idx += 1
+            
 
         # pool fast and slow roi alignments
         roi_slow_feats = torch.stack(roi_slow_feats, dim=0)
