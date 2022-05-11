@@ -6,6 +6,7 @@ resume_path: ckpt_6.pth.tar
 manual_seed: 1
 print_freq: 20
 dataset: "road"
+experiment_name: "test wandb pure evaluation"
 nproc_per_node: 1
 debug: False
 
