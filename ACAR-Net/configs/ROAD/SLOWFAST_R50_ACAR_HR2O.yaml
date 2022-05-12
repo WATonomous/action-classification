@@ -1,12 +1,13 @@
-evaluate: True
-result_path: ./output/text # same for any experiment in dvc world
-tensorboard_path: ./output/tensorboard
-model_path: # path to save model checkpoints during training
-resume_path: # model checkpoint to resume from
+# evaluate: True
+evaluate: False
+result_path: /home/agehlan/road-dataset/logs/text
+tensorboard_path: /home/agehlan/road-dataset/logs/tensorboard
+model_path: /home/agehlan/saved_models/thor_gpu1
+resume_path:
 manual_seed: 1
 print_freq: 20
 dataset: "road"
-experiment_name: "baseline" # has no effect in dvc world
+experiment_name: "baseline"
 
 class_list: ["Red", "Amber", "Green",
 "MovAway", "MovTow",
@@ -23,7 +24,7 @@ model:
         arch: slowfast50
         learnable: True
         pretrain:
-            path: /road/acar_models/SLOWFAST_R50_K400.pth.tar # base slowfast model.
+            path: /road/acar_models/SLOWFAST_R50_K400.pth.tar
         kwargs:
             alpha: 4
             beta: 0.125
