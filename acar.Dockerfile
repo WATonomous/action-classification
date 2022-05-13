@@ -6,7 +6,6 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys A4B469963BF863CC
 RUN apt-get update && apt-get upgrade -y \
  && apt-get install -y \
     gcc \
-	git \
     ffmpeg \
     libsm6 \
     libxext6 \
@@ -32,7 +31,6 @@ RUN pip install \
 	sklearn \
 	Pillow \
         av \
-	wandb\
 	ffmpeg \
 	moviepy \
 	'iopath<0.1.9,>=0.1.7' \
@@ -47,6 +45,11 @@ RUN pip install torch pytorchvideo torchvision
 RUN pip install torch==1.10.0+cu111 torchvision==0.11.0+cu111 pytorchvideo -f https://download.pytorch.org/whl/cu111/torch_stable.html
 
 RUN pip install easydict tensorboardx
+<<<<<<< HEAD
 WORKDIR /project/action-classification
+=======
+
+WORKDIR /project/ACAR-Net
+>>>>>>> cc174da26fa031a189485a4867d21118638b51e5
 
 # python3 ./main.py --config configs/ROAD/SLOWFAST_R50_ACAR_HR2O.yaml
