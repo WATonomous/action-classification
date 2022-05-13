@@ -1,9 +1,11 @@
+from distutils.log import ERROR
 import multiprocessing as mp
 mp.set_start_method('spawn', force=True)
 import os
 import argparse
 import json
 import pprint
+import signal
 import socket
 import time
 from easydict import EasyDict
@@ -26,6 +28,28 @@ from utils import *
 
 import tensorboard_funcs
 import wandb
+
+def log_artifacts():
+    results = wandb.Artifact(name = "results", type= "results", description = "results and config files")
+    ckpts = wandb.Artifact(name = "models", type = "models", description= "model checkpoints")
+    results.add_dir("./output/text")
+    ckpts.add_dir("./output/saved_models")
+    wandb.log_artifact(results)
+    wandb.log_artifact(ckpts)
+    wandb.finish()
+
+
+def handler(signum, frame):
+    while True:
+        res = input("Run aborted mid-epoch. Save existing artifacts? (y/n): ")
+        if res == 'y':
+            print("Trying to log artifacts....")
+            log_artifacts()
+            break
+        elif res == 'n':
+            print("Wait for wandb to exit... (Ctrl-C if hanging)")
+            break
+
 
 def main(local_rank, args):
     """
@@ -63,12 +87,6 @@ def main(local_rank, args):
         logger = create_logger(os.path.join(opt.result_path, f'log.txt'))
         logger.info('opt: {}'.format(pprint.pformat(opt, indent=2)))
         
-        if not opt.debug:
-            # if we're debugging, don't log anything
-            if opt.experiment_name == "":
-                wandb.init(project='acar', sync_tensorboard=True)
-            else:
-                wandb.init(project='acar', name = opt.experiment_name, sync_tensorboard=True)
         writer = SummaryWriter(opt.tensorboard_path)
     else:
         logger = writer = None
@@ -274,15 +292,7 @@ def main(local_rank, args):
                           opt, logger, val_logger, rank, world_size, writer)
 
     if rank == 0:
-        if not opt.debug:
-            # finish() call must match init() call
-            results = wandb.Artifact(name = "results", type= "results", description = "results and config files")
-            ckpts = wandb.Artifact(name = "models", type = "models", description= "model checkpoints")
-            results.add_dir("./output/text")
-            ckpts.add_dir("./output/saved_models")
-            wandb.log_artifact(results)
-            wandb.log_artifact(ckpts)
-            wandb.finish()
+        log_artifacts()
         writer.close()
     
     
@@ -450,10 +460,6 @@ def val_epoch(epoch, data_loader, model, criterion, act_func,
     end_time = time.time()
     for i, data in enumerate(data_loader):
 
-        if opt.debug and i > 5:
-            # if we are debugging, shorten the run so it doesn't take that long.
-            break
-        
         data_time.update(time.time() - end_time)
 
         with torch.no_grad():
@@ -560,6 +566,7 @@ def val_epoch(epoch, data_loader, model, criterion, act_func,
 
 
 if __name__ == '__main__':
+
     parser = argparse.ArgumentParser(description='PyTorch AVA Training and Evaluation')
     parser.add_argument('--config', type=str, required=True)
     parser.add_argument('--nproc_per_node', type=int, default=8)
@@ -575,4 +582,15 @@ if __name__ == '__main__':
     opt = EasyDict(config)
     args.nproc_per_node = opt.nproc_per_node # hack to make the rest of the code work
 
+    # if we're debugging, don't log anything
+
+    ####################################################
+    # To turn off wandb, run: export WANDB_MODE=offline
+    ####################################################
+    if opt.experiment_name == "" or opt.experiment_name == None:
+        raise ValueError("No experiment name specified in run config.")
+    else:
+        wandb.init(project='acar', name = opt.experiment_name, sync_tensorboard=True)
+
+    signal.signal(signal.SIGINT, handler)
     torch.multiprocessing.spawn(main, args=(args,), nprocs=opt.nproc_per_node)
