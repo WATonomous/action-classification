@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torchvision
 from easydict import EasyDict
 import yaml
 import os
@@ -47,6 +48,10 @@ if __name__ == '__main__':
     o_b = {
         'features': [torch.rand(8, 2048, 8, 16, 22), torch.rand(8, 256, 32, 16, 22)]
     }
+    rois = torch.zeros(42, 32, 1)
+    rands = torch.rand(42, 32, 4)
+    rois = torch.cat((rois, rands), dim=2)
+    
     o_n = {
         'rois': torch.rand(42, 32, 5),
         'num_rois': 42,
@@ -56,4 +61,6 @@ if __name__ == '__main__':
 
     # eval
     print(model.forward_head(o_b, o_n).shape)
+
+
     

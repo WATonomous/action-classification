@@ -72,6 +72,7 @@ def main(local_rank, args):
 
         temporal_transform = getattr(temporal_transforms, train_aug.temporal.type)(**train_aug.temporal.get('kwargs', {}))
 
+        # DATASET IS INITIALIZED, SEE DATASETS/AVA.PY/ROAD CLASS
         if opt.get('dataset', "ava") == "road":
             train_data = ava.ROAD(
                 opt.train.root_path,
