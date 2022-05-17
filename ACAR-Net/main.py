@@ -26,6 +26,7 @@ from scheduler import get_scheduler
 from utils import *
 
 import tensorboard_funcs
+import wandb
 
 def log_artifacts():
     results = wandb.Artifact(name = "results", type= "results", description = "results and config files")
@@ -526,7 +527,7 @@ if __name__ == '__main__':
     ####################################################
     # To turn off wandb, run: export WANDB_MODE=offline
     ####################################################
-    if opt.experiment_name == "" or opt.experiment_name == None:
+    if not opt.experiment_name:
         raise ValueError("No experiment name specified in run config.")
     else:
         wandb.init(project='acar', name = opt.experiment_name, sync_tensorboard=True)

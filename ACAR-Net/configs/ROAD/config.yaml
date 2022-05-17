@@ -7,6 +7,9 @@ manual_seed: 1
 print_freq: 20
 dataset: "road"
 experiment_name: "test_changes"
+# node * processes per node = # of cores that will be allocated
+# we have one node, but can have multiple processes per node to take advantage of
+# multiple GPU training (1 GPU per process). Resource: https://yangkky.github.io/2019/07/08/distributed-pytorch-tutorial.html 
 nproc_per_node: 1
 
 class_list: ["Red", "Amber", "Green",
