@@ -39,16 +39,8 @@ def log_artifacts():
 
 
 def handler(signum, frame):
-    while True:
-        res = input("Run aborted mid-epoch. Save existing artifacts? (y/n): ")
-        if res == 'y':
-            print("Trying to log artifacts....")
-            log_artifacts()
-            break
-        elif res == 'n':
-            print("Wait for wandb to exit... (Ctrl-C if hanging)")
-            break
-
+    print("Trying to log artifacts.... (Ctrl-C to stop)")
+    log_artifacts()
 
 def main(local_rank, args):
     """
@@ -78,10 +70,11 @@ def main(local_rank, args):
     
     
     if rank == 0:
-        if opt.experiment_name:
+        if not opt.experiment_name:
             raise ValueError("No experiment name specified in run config.")
         else:
             wandb.init(project='acar', name = opt.experiment_name, sync_tensorboard=True)
+        signal.signal(signal.SIGINT, handler)
         mkdir(opt.result_path)
         mkdir(os.path.join(opt.result_path, 'tmp'))
         with open(os.path.join(opt.result_path, f'opts.json'), 'w') as opt_file:
@@ -590,5 +583,4 @@ if __name__ == '__main__':
     # To turn off wandb, run: export WANDB_MODE=offline
     ####################################################
 
-    signal.signal(signal.SIGINT, handler)
     torch.multiprocessing.spawn(main, args=(args,), nprocs=opt.nproc_per_node)
