@@ -4,6 +4,7 @@ import torchvision
 from easydict import EasyDict
 import yaml
 import os
+import random
 
 from necks import AVA_neck
 from heads import AVA_head
@@ -50,10 +51,14 @@ if __name__ == '__main__':
     }
     rois = torch.zeros(42, 32, 1)
     rands = torch.rand(42, 32, 4)
+    rand_roi = random.randint(0, 41)
+    rand_frame = random.randint(0, 31)
+    rands[rand_roi][rand_frame] = torch.tensor([1, 1, 1, 1])
+
     rois = torch.cat((rois, rands), dim=2)
     
     o_n = {
-        'rois': torch.rand(42, 32, 5),
+        'rois': rois,
         'num_rois': 42,
         'roi_ids': [0, 3, 9, 17, 25, 31, 33, 38, 42],
         'sizes_before_padding': [[1.0, 1.0], [1.0, 1.0], [1.0, 1.0], [1.0, 1.0], [1.0, 1.0], [1.0, 1.0], [1.0, 1.0], [1.0, 1.0]],
@@ -61,6 +66,7 @@ if __name__ == '__main__':
 
     # eval
     print(model.forward_head(o_b, o_n).shape)
+
 
 
     
