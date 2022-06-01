@@ -10,6 +10,7 @@ RUN apt-get update && apt-get upgrade -y \
     libsm6 \
     libxext6 \
 	gfortran \
+	vim \
 	libopenblas-dev \
 	liblapack-dev
 
@@ -30,6 +31,7 @@ RUN pip install \
 	pandas \
 	sklearn \
 	Pillow \
+	ipykernel \
         av \
 	ffmpeg \
 	moviepy \
