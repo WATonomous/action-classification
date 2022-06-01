@@ -21,6 +21,7 @@ class BasicNeck(nn.Module):
     # data: aug_info, labels, filenames, mid_times
     # returns: num_rois, rois, roi_ids, targets, sizes_before_padding, filenames, mid_times, bboxes, bbox_ids
     # TODO change the number of rois coming into here, make sure that each group of rois share the same id
+    # invalid roi is [batch_num, 1, 1, 1, 1]
     def forward(self, data):
         rois, roi_ids, targets, sizes_before_padding, filenames, mid_times = [], [0], [], [], [], []
         bboxes, bbox_ids = [], []  # used for multi-crop fusion

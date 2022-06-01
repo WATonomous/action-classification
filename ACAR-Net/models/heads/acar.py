@@ -79,7 +79,7 @@ class ACARHead(nn.Module):
     # data: features, rois, num_rois, roi_ids, sizes_before_padding
     # returns: outputs
     def forward(self, data):
-        ''' ACAR HEAD: takes in backbone and neck and produces action predictions through HR2O
+        ''' ACAR HEAD: takes in data from the backbone and neck, produces action predictions through HR2O
             Coming in rois must be of shape [42, N_f(in this case =32), 5].
             When no roi exists, this code expects an roi of [batch_num, 1, 1, 1, 1] or
             in other words, an invalid roi. This creates a tensor of zeros.
