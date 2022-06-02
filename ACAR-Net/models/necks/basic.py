@@ -27,12 +27,15 @@ class BasicNeck(nn.Module):
         bboxes, bbox_ids = [], []  # used for multi-crop fusion
 
         cur_bbox_id = -1  # record current bbox no.
-        for idx in range(len(data['aug_info'])):
+        for idx in range(len(data['aug_info'])): # idx is batch num
             aug_info = data['aug_info'][idx]
             pad_ratio = aug_info['pad_ratio']
             sizes_before_padding.append([1. / pad_ratio[0], 1. / pad_ratio[1]])
             
-            for label in data['labels'][idx]:
+            # TODO add another loop here I think
+            ''' BASED ON WHAT YOU HAVE DONE TO THE DATA LOADER, MAKE THE NECESSARY CHANGES TO ITERATE THROUGH EACH FRAME
+            '''
+            for label in data['labels'][idx]: 
                 cur_bbox_id += 1
                 if self.training and self.bbox_jitter is not None:
                     bbox_list = bbox_jitter(label['bounding_box'],
@@ -40,13 +43,13 @@ class BasicNeck(nn.Module):
                                             self.bbox_jitter.scale)
                 else:
                     # no bbox jittering during evaluation
-                    bbox_list = [label['bounding_box']]
+                    bbox_list = [label['bounding_box']] # label needs to have multiple bboxes for each frame (ditto to the other part of the conditional statement)
                 
                 for b in bbox_list:
                     bbox = get_bbox_after_aug(aug_info, b, self.aug_threshold)
                     if bbox is None:
                         continue
-                    rois.append([idx] + bbox)
+                    rois.append([idx] + bbox) # this needs to change roi.append([idx] + bbox_frame_list)
                     
                     filenames.append(data['filenames'][idx])
                     mid_times.append(data['mid_times'][idx])

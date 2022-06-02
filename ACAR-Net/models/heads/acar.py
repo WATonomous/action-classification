@@ -84,6 +84,8 @@ class ACARHead(nn.Module):
             Coming in rois must be of shape [42, N_f(in this case =32), 5].
             When no roi exists, this code expects an roi of [batch_num, 1, 1, 1, 1] or
             in other words, an invalid roi. This creates a tensor of zeros.
+            I'm not sure if this is the move, we'll see
+            efficiency is a problem here
         '''
         if not isinstance(data['features'], list):
             feats = [data['features']]
@@ -111,15 +113,16 @@ class ACARHead(nn.Module):
             roi_fast_feats.append(self.head_roi_align(rois, f_f, h, w))
 
         # stack pooled fast and slow roi alignments
-        roi_slow_feats = torch.stack(roi_slow_feats, dim=2)
-        roi_fast_feats = torch.stack(roi_fast_feats, dim=2)
+        roi_slow_feats = torch.stack(roi_slow_feats, dim=2) # [42, 2048, 8, 7, 7]
+        roi_fast_feats = torch.stack(roi_fast_feats, dim=2) # [42, 256, 32, 7, 7]
 
         # filter out invalid rois and avg pool
-        start = time.time()
-        roi_slow_feats = [nn.AdaptiveAvgPool3d((1, self.roi_spatial, self.roi_spatial))(s_f[:, (s_f!=0).all(3).all(2).all(0)]) for s_f in roi_slow_feats]
-        roi_fast_feats = [nn.AdaptiveAvgPool3d((1, self.roi_spatial, self.roi_spatial))(f_f[:, (f_f!=0).all(3).all(2).all(0)]) for f_f in roi_fast_feats]
-        finish = time.time() - start
-        print(finish)
+        roi_slow_feats_nonzero = (roi_slow_feats!=0).all(4).all(3).all(1) # [42, 8]
+        roi_fast_feats_nonzero = (roi_fast_feats!=0).all(4).all(3).all(1) # [42, 32]
+
+        roi_slow_feats = [nn.AdaptiveAvgPool3d((1, self.roi_spatial, self.roi_spatial))(roi_slow_feats[idx, :, s_f]) for s_f, idx in zip(roi_slow_feats_nonzero, range(len(roi_slow_feats)))]
+        roi_fast_feats = [nn.AdaptiveAvgPool3d((1, self.roi_spatial, self.roi_spatial))(roi_slow_feats[idx, :, f_f]) for f_f, idx in zip(roi_fast_feats_nonzero, range(len(roi_fast_feats)))]
+
         # stack pooled fast and slow roi alignments, squeeze frame dim
         roi_slow_feats = torch.stack(roi_slow_feats, dim=0).squeeze(dim=2)
         roi_fast_feats = torch.stack(roi_fast_feats, dim=0).squeeze(dim=2)

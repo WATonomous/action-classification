@@ -156,7 +156,9 @@ class AVADataLoader(data.DataLoader):
             datum['aug_info']['pad_ratio'] = pad_ratio
             aug_info.append(datum['aug_info'])
         filenames = [_['video_name'] for _ in batch]
-        labels = [_['label'] for _ in batch]
+        labels = [_['label'] for _ in batch] # <----------------------- where labels are loaded... batch? oh yeah its list comprehension, but double check what batch is
+        ''' you can move onto the main.py after this
+        '''
         mid_times = [_['mid_time'] for _ in batch]
         
         output = {
@@ -240,7 +242,12 @@ class ROAD(data.Dataset):
         with open(annotation_path, "r") as f:
             if split == "train_1":
                 fs = f.read()
-                ann_dict = json.loads(fs)
+                ''' The entrypoint of the bounding box data, bboxes are in the json file.
+                    TODO: START HERE, look at json file, so how we can parse it differently to get boxes for each frame of video
+                    debug annon, see what it consists of 
+                    move on to line 159 of this file
+                '''
+                ann_dict = json.loads(fs) # this is where the annotations are <------------------------ maybe these have some more bboxes?
                 for video in ann_dict['db'].keys():
                     if split not in ann_dict['db'][video]['split_ids']:
                         continue
@@ -265,8 +272,8 @@ class ROAD(data.Dataset):
                         dp['labels'] = []
                         assert len(frame['annos']) > 0, frame['annotated']
                         for annon in frame['annos'].values():
-                            label = {'bounding_box': annon['box'], 'label': annon['action_ids']}
-                            dp['labels'].append(label)
+                            label = {'bounding_box': annon['box'], 'label': annon['action_ids']} # this needs to be a list of bboxes <--------- what is action_ids?
+                            dp['labels'].append(label) # label is created here <-------------------------------------
                         self.data.append(dp)
             elif split == "val_1":
                 fs = f.read()
@@ -292,7 +299,7 @@ class ROAD(data.Dataset):
                             dp['n_frames'] = ann_dict['db'][video]['numf'] - dp['start_frame'] + 1
                         dp['format_str'] = '%05d.jpg'
                         dp['frame_rate'] = self.fps
-                        dp['labels'] = []
+                        dp['labels'] = [] # <----------------------------- labels also created here (should be similar to above)
                         assert len(frame['annos']) > 0, frame['annotated']
                         for annon in frame['annos'].values():
                             label = {'bounding_box': annon['box'], 'label': annon['action_ids']}

@@ -76,7 +76,7 @@ def main(local_rank, args):
         if opt.get('dataset', "ava") == "road":
             train_data = ava.ROAD(
                 opt.train.root_path,
-                opt.train.annotation_path,
+                opt.train.annotation_path, # check this json, hsould have the bboxes for each of the frames
                 opt.train.class_idx_path,
                 "train_1",
                 spatial_transform,
@@ -92,7 +92,7 @@ def main(local_rank, args):
 
         train_sampler = DistributedSampler(train_data, round_down=True)
 
-        train_loader = ava.AVADataLoader(
+        train_loader = ava.AVADataLoader(     # <----------------------------- the train loader is what loads the data, nothing really changes until it enters the model
             train_data,
             batch_size=opt.train.batch_size,
             shuffle=False,
@@ -150,7 +150,7 @@ def main(local_rank, args):
     temporal_transform = getattr(temporal_transforms, val_aug.temporal.type)(**val_aug.temporal.get('kwargs', {}))
 
     if opt.get('dataset', "ava") == "road":                                                    
-        val_data = ava.ROADmulticrop(
+        val_data = ava.ROADmulticrop(         # <---------------------------- more loading is occuring here! this is for val, will have to change too
             opt.val.root_path,
             opt.val.annotation_path,
             opt.val.class_idx_path,
@@ -216,6 +216,8 @@ def main(local_rank, args):
 
     criterion, act_func = getattr(losses, opt.loss.type)(**opt.loss.get('kwargs', {}))
 
+    ''' data loading occurs here <---------------------------------------------------------------
+    '''
     if opt.get('evaluate', False):  # evaluation mode
         val_epoch(begin_epoch - 1, val_loader, net, criterion, act_func,
                   opt, logger, val_logger, rank, world_size, writer)
@@ -250,13 +252,13 @@ def train_epoch(epoch, data_loader, model, criterion, optimizer, scheduler,
     train_epoch_targets = torch.tensor([]).cpu()
 
     end_time = time.time()
-    for i, data in enumerate(data_loader):
+    for i, data in enumerate(data_loader): # <-------------------------- what does enumerating the data_loader do?
         data_time.update(time.time() - end_time)
 
         curr_step = (epoch - 1) * len(data_loader) + i
         scheduler.step(curr_step)
 
-        ret = model(data)
+        ret = model(data) # <----------------------------------------- INTO THE MODEL WE GO! Once we get to this step, neck is next
         num_rois = ret['num_rois']
         outputs = ret['outputs']
         targets = ret['targets']
@@ -375,11 +377,11 @@ def val_epoch(epoch, data_loader, model, criterion, act_func,
     val_epoch_targets = torch.tensor([]).cpu()
 
     end_time = time.time()
-    for i, data in enumerate(data_loader):  
+    for i, data in enumerate(data_loader):  # what does enumerating the data loader do? <----------------------------------------------
         data_time.update(time.time() - end_time)
 
         with torch.no_grad():
-            ret = model(data, evaluate=True)
+            ret = model(data, evaluate=True) # <----------------------------------------- INTO THE MODEL WE GO! Once we get to this step, neck is next
             num_rois = ret['num_rois']
             outputs = ret['outputs']
             targets = ret['targets']

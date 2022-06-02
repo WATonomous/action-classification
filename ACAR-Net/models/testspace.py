@@ -49,6 +49,7 @@ if __name__ == '__main__':
     o_b = {
         'features': [torch.rand(8, 2048, 8, 16, 22), torch.rand(8, 256, 32, 16, 22)]
     }
+    
     rois = torch.zeros(42, 32, 1)
     rands = torch.rand(42, 32, 4)
     rand_roi = random.randint(0, 41)
