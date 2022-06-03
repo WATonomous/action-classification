@@ -1,4 +1,3 @@
-from audioop import reverse
 from PIL import Image
 import os
 import pickle
