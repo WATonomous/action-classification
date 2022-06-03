@@ -240,9 +240,11 @@ class ROAD(data.Dataset):
         self.num_frames_in_clip = 91
 
         with open(annotation_path, "r") as f:
+            
+            fs = f.read()
+            ann_dict = json.loads(fs)
+
             if split == "train_1":
-                fs = f.read()
-                ann_dict = json.loads(fs)
                 for video in ann_dict['db'].keys():
                     if split not in ann_dict['db'][video]['split_ids']:
                         continue
@@ -266,18 +268,16 @@ class ROAD(data.Dataset):
                         dp['frame_rate'] = self.fps
                         dp['labels'] = []
                         assert len(frame['annos']) > 0, frame['annotated']
-                        action_ids_in_frame = set([])
                         for annon in frame['annos'].values():
                             label = {'bounding_box': annon['box'], 'label': annon['action_ids']}
-                            action_ids_in_frame = action_ids_in_frame.union(set(annon['action_ids']))
+                            for action_id in annon['action_ids']:
+                                self.action_counts[action_id] = self.action_counts.get(action_id, 0) + 1
                             dp['labels'].append(label)
-                        self.apply_oversampling_scheme(dp, action_ids_in_frame, ann_dict['all_action_labels'])
+                        self.data.append(dp)
                 print("Data Distribution by action class:")
                 for k, v in self.action_counts.items():
                     print(ann_dict['all_action_labels'][k], v)
             elif split == "val_1":
-                fs = f.read()
-                ann_dict = json.loads(fs)
                 for video in ann_dict['db'].keys():
                     if split not in ann_dict['db'][video]['split_ids']:
                         continue
@@ -303,6 +303,8 @@ class ROAD(data.Dataset):
                         assert len(frame['annos']) > 0, frame['annotated']
                         for annon in frame['annos'].values():
                             label = {'bounding_box': annon['box'], 'label': annon['action_ids']}
+                            for action_id in annon['action_ids']:
+                                self.action_counts[action_id] = self.action_counts.get(action_id, 0) + 1
                             dp['labels'].append(label)
                         self.data.append(dp)
         with open(class_idx_path, "r") as f:
@@ -313,70 +315,6 @@ class ROAD(data.Dataset):
         self.root_path = root_path
         self.spatial_transform = spatial_transform
         self.temporal_transform = temporal_transform
-
-    def apply_oversampling_scheme(self, dp, action_ids_in_frame, all_action_labels):
-        """
-        Based on the label name, we decide how much we want to oversample this class.
-        We explicitly implement these choices based on the observed class distribution in 
-        the train data.
-
-        This a very naive oversampling implementation aimed at preserving generalizability of 
-        the model while oversampling classes performing significantly poorly or which are 
-        significantly underrepresented.
-
-        Generally, we try to oversample class to ~10k frames
-
-        The classes in the train_1 split are 
-        Name        # frames    overampling rule    comments
-        Stop        80904       None
-        HazLit      2140        5x                  HazLit usually occurs with Stop
-        MovAway     127014      None
-        MovTow      111222      None
-        Brake       17958       None
-        Green       19310       None                Traffic lights are already learned well
-        TurRht      5858        2x                  Should be roughly equal with TurLft  
-        Wait2X      9695        None
-        Amber       5808        None                Traffic lights are already learned well
-        Red         39406       None                Traffic lights are already learned well
-        IncatLft    3163        5x                  Oversample to 15k, we want to learn inc better
-        XingFmLft   15687       None                
-        MovRht      253         10x                 Should be roughly equal to MovLft, over 10x sampling 
-                                                    could be too much, stopping there
-        XingFmRht   10813       None
-        Xing        4800        3x
-        Ovtak       747         10x                 
-        Mov         7782        3x                  Should have slightly larger ratio compared to MovAway & MovTow
-        TurLft      3953        3x                  Should be roughly equal with TurRht
-        PushObj     3896        3x                  
-        IncatRht    5392        3x                  Should be roughly equal to IncatLft
-        MovLft      230         10x                 Should be roughly equal to MovRht
-        Rev         39          20x                 Breaking the 10k rule for this, because there are too few.
-        """
-        # strategy is to check for worst represented classes first, up to best represented
-        reverse_map = {all_action_labels[idx] : idx for idx in range(len(all_action_labels))}
-        n = 0
-        if reverse_map['Rev'] in action_ids_in_frame:
-            n = 20
-        elif reverse_map['MovLft'] in action_ids_in_frame or \
-                reverse_map['MovRht'] in action_ids_in_frame or \
-                reverse_map['Ovtak'] in action_ids_in_frame:
-            n = 10
-        elif reverse_map['HazLit'] in action_ids_in_frame or \
-                reverse_map['IncatLft']:
-            n = 5
-        elif reverse_map['Mov'] in action_ids_in_frame or \
-                reverse_map['TurLft'] in action_ids_in_frame or \
-                reverse_map['PushObj'] in action_ids_in_frame or \
-                reverse_map['IncatRht'] in action_ids_in_frame or \
-                reverse_map['Xing'] in action_ids_in_frame:
-            n = 3
-        elif reverse_map['TurRht'] in action_ids_in_frame:
-            n = 2
-        for i in range(n):
-            for bbox in dp['labels']:
-                for action_id in bbox['label']:
-                    self.action_counts[action_id] = self.action_counts.get(action_id, 0) + 1
-            self.data.append(dp)
 
     def detection_bbox_to_ava(self, bbox):
         x1, y1, x2, y2 = bbox

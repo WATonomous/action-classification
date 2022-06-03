@@ -266,8 +266,15 @@ def main(local_rank, args):
             if rank == 0:
                 logger.info('Also loaded optimizer and scheduler from checkpoint {}'.format(opt.resume_path))
 
-    criterion, act_func = getattr(losses, opt.loss.type)(**opt.loss.get('kwargs', {}))
-
+    if opt.loss.type.startswith('ava'):
+        criterion, act_func = getattr(losses, opt.loss.type)(**opt.loss.get('kwargs', {}))
+    else:
+        # This is a class instantiation, LOL
+        # this is necessary because we want to compute the inverse class
+        # frequency weighting as a parameter to the loss function
+        focal_loss = FocalLoss(train_data.action_counts)
+        criterion = focal_loss.compute_focal_loss
+        act_func = ava_pose_softmax_func
 
                         ###################################
                             # TRAINING AND VALIDATION
