@@ -76,7 +76,16 @@ def main(local_rank, args):
         if opt.get('dataset', "ava") == "road":
             train_data = ava.ROAD(
                 opt.train.root_path,
-                opt.train.annotation_path, # check this json, hsould have the bboxes for each of the frames
+                opt.train.annotation_path, 
+                opt.train.class_idx_path,
+                "train_1",
+                spatial_transform,
+                temporal_transform,
+            )
+        elif opt.get('dataset', "ava") == "road_tube":
+            train_data = ava.ROADTube(
+                opt.train.root_path,
+                opt.train.annotation_path, 
                 opt.train.class_idx_path,
                 "train_1",
                 spatial_transform,
@@ -92,7 +101,7 @@ def main(local_rank, args):
 
         train_sampler = DistributedSampler(train_data, round_down=True)
 
-        train_loader = ava.AVADataLoader(     # <----------------------------- the train loader is what loads the data, nothing really changes until it enters the model
+        train_loader = ava.AVADataLoader(    
             train_data,
             batch_size=opt.train.batch_size,
             shuffle=False,
@@ -150,10 +159,19 @@ def main(local_rank, args):
     temporal_transform = getattr(temporal_transforms, val_aug.temporal.type)(**val_aug.temporal.get('kwargs', {}))
 
     if opt.get('dataset', "ava") == "road":                                                    
-        val_data = ava.ROADmulticrop(         # <---------------------------- more loading is occuring here! this is for val, will have to change too
+        val_data = ava.ROADmulticrop(         
             opt.val.root_path,
             opt.val.annotation_path,
             opt.val.class_idx_path,
+            "val_1",
+            spatial_transform,
+            temporal_transform,
+        )
+    elif opt.get('dataset', "ava") == "road_tube":
+        train_data = ava.ROADTube(
+            opt.train.root_path,
+            opt.train.annotation_path, 
+            opt.train.class_idx_path,
             "val_1",
             spatial_transform,
             temporal_transform,
@@ -253,6 +271,11 @@ def train_epoch(epoch, data_loader, model, criterion, optimizer, scheduler,
 
     end_time = time.time()
     for i, data in enumerate(data_loader): # <-------------------------- what does enumerating the data_loader do?
+        # if there are no rois, no need to go through the model
+        if opt.get('dataset', "ava") == "road_tube" and not data: 
+            end_time = time.time()
+            continue
+
         data_time.update(time.time() - end_time)
 
         curr_step = (epoch - 1) * len(data_loader) + i
@@ -266,10 +289,6 @@ def train_epoch(epoch, data_loader, model, criterion, optimizer, scheduler,
         tot_rois = torch.Tensor([num_rois]).cuda()
         dist.all_reduce(tot_rois)
         tot_rois = tot_rois.item()
-
-        if tot_rois == 0:
-            end_time = time.time()
-            continue
 
         optimizer.zero_grad()
 

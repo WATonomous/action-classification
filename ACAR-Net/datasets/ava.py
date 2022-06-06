@@ -253,12 +253,12 @@ class ROAD(data.Dataset):
                         continue
 
                     for frame in ann_dict['db'][video]['frames'].values():
-                        if not frame['annotated'] or len(frame['annos']) == 0:
+                        if not frame['annotated'] or len(frame['annos']) == 0: # any frame that contains annotations is a training point
                             continue
                         # Let's use this frame as a training point
                         dp = {}
                         frame_id = int(frame['input_image_id'])
-                        if split == "val_1" and frame_id % 1 != 0:
+                        if frame_id % 1 != 0:
                             continue
                         dp['video'] = video
                         dp['time'] = frame_id
@@ -288,7 +288,7 @@ class ROAD(data.Dataset):
                         # Let's use this frame as a training point
                         dp = {}
                         frame_id = int(frame['input_image_id'])
-                        if split == "train_1" and frame_id % 1 != 0:
+                        if frame_id % 1 != 0:
                             continue
                         dp['video'] = video
                         dp['time'] = frame_id
@@ -334,7 +334,7 @@ class ROAD(data.Dataset):
         clip = torch.stack(clip, 0).permute(1, 0, 2, 3)
         return clip, aug_info
 
-    def __getitem__(self, index):
+    def __getitem__(self, index): # this might be more important actually 
         path = os.path.join(self.root_path, self.data[index]['video'])
         frame_format = self.data[index]['format_str']
         start_frame = self.data[index]['start_frame']
@@ -358,6 +358,146 @@ class ROAD(data.Dataset):
             clip.append(img)
 
         clip, aug_info = self._spatial_transform(clip)
+        
+        return {'clip': clip, 'aug_info': aug_info, 'label': target, 
+                'video_name': video_name, 'mid_time': mid_time}
+
+    def __len__(self):
+        return len(self.data)
+
+class ROADTube(data.Dataset):
+    def __init__(self,
+                 root_path,
+                 annotation_path,
+                 class_idx_path,
+                 split,
+                 spatial_transform=None,
+                 temporal_transform=None):
+        self.data = [] # stores the other frames
+        self.data_stride = [] # stores the stride'th frame
+        self.fps = 12
+        self.num_frames_in_clip = 91
+        self.stride = 32 # distributed sampling, > stride means more unique data but less data points
+
+        with open(annotation_path, "r") as f:
+            if split == "train_1":
+                fs = f.read()
+                ''' The entrypoint of the bounding box data, bboxes are in the json file.
+                    TODO: START HERE, look at json file, so how we can parse it differently to get boxes for each frame of video
+                    debug annon, see what it consists of 
+                    move on to line 159 of this file
+                '''
+                ann_dict = json.loads(fs) 
+                for video in ann_dict['db'].keys():
+                    if split not in ann_dict['db'][video]['split_ids']:
+                        continue
+
+                    self.append_new_data(video, ann_dict)
+
+            elif split == "val_1":
+                fs = f.read()
+                ann_dict = json.loads(fs)
+                for video in ann_dict['db'].keys():
+                    if split not in ann_dict['db'][video]['split_ids']:
+                        continue
+
+                    self.append_new_data(video, ann_dict)
+                        
+
+        with open(class_idx_path, "r") as f:
+            items = json.load(f).items()
+            self.idx_to_class = sorted(items, key=lambda x: x[1])
+            self.idx_to_class = list(map(lambda x: {'name': x[0], 'id': x[1]}, self.idx_to_class))
+
+        self.root_path = root_path
+        self.spatial_transform = spatial_transform
+        self.temporal_transform = temporal_transform
+
+    def append_new_data(self, video, ann_dict):
+        for frame in ann_dict['db'][video]['frames'].values():
+            dp = {}
+            frame_id = int(frame['input_image_id'])
+            dp['video'] = video
+            dp['time'] = frame_id
+            dp['midframe'] = frame_id
+            dp['start_frame'] = max(0, frame_id - self.num_frames_in_clip // 2)
+            dp['n_frames'] = self.num_frames_in_clip
+
+            if dp['start_frame'] + dp['n_frames'] - 1 > ann_dict['db'][video]['numf']:
+                dp['n_frames'] = ann_dict['db'][video]['numf'] - dp['start_frame'] + 1
+
+            dp['format_str'] = '%05d.jpg'
+            dp['frame_rate'] = self.fps
+            dp['labels'] = []
+            
+            if len(frame['annos']) > 0 and frame['annotated']:
+                for annon in frame['annos'].values():
+                    label = {'tube_uid': annon['tube_uid'], 'bounding_box': annon['box'], 'label': annon['action_ids']}
+                    dp['labels'].append(label)
+
+            if frame_id % self.stride == 0:
+                self.data_stride.append(dp)
+
+            self.data.append(dp)
+
+        return
+
+    def detection_bbox_to_ava(self, bbox):
+        x1, y1, x2, y2 = bbox
+        convbb = [x1/1280, y1/960, x2/1280, y2/960]
+        return convbb
+        
+
+    def _spatial_transform(self, clip):
+        if self.spatial_transform is not None:
+            init_size = clip[0].size[:2]
+            params = self.spatial_transform.randomize_parameters()
+            aug_info = get_aug_info(init_size, params)
+            
+            clip = [self.spatial_transform(img) for img in clip]
+        else:
+            aug_info = None
+        clip = torch.stack(clip, 0).permute(1, 0, 2, 3)
+        return clip, aug_info
+
+    def __getitem__(self, index): # this might be more important actually 
+        path = os.path.join(self.root_path, self.data[index]['video'])
+        frame_format = self.data_stride[index]['format_str']
+        start_frame = self.data_stride[index]['start_frame']
+        n_frames = self.data_stride[index]['n_frames']
+        mid_time = str(self.data_stride[index]['time'])
+        # target = [self.data[index]['labels']]
+        target = [] # dictionary of tube uids and their rois in the clip ([1, 1, 1, 1] is for an empty roi)
+        video_name = self.data_stride[index]['video']
+        empty_anno = True
+        
+        end_frame = start_frame + n_frames
+        if end_frame > self.__len__:
+            end_frame = self.__len__ 
+
+        frame_indices = list(range(start_frame, end_frame))
+        if self.temporal_transform is not None:
+            frame_indices = self.temporal_transform(frame_indices)
+        
+        clip = []
+        # load clips, consolidate agent tracks via tube_uid
+        for i in range(len(frame_indices)):
+            if self.data[frame_indices[i]]['labels']: # if even one frame contains annotations, we retain it as a datapoint
+                empty_anno = False
+
+            target.append([self.data[frame_indices[i]]['labels']])
+            image_path = os.path.join(path, frame_format%frame_indices[i])
+            try:
+                with Image.open(image_path) as img:
+                    img = img.convert('RGB')
+            except BaseException as e:
+                raise RuntimeError('Caught "{}" when loading {}'.format(str(e), image_path))
+            clip.append(img)
+
+        clip, aug_info = self._spatial_transform(clip)
+
+        if empty_anno: # we reject this clip as a datapoint (no labels to consider)
+            return None
         
         return {'clip': clip, 'aug_info': aug_info, 'label': target, 
                 'video_name': video_name, 'mid_time': mid_time}
