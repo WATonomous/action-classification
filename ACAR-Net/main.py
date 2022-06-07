@@ -270,7 +270,7 @@ def train_epoch(epoch, data_loader, model, criterion, optimizer, scheduler,
     train_epoch_targets = torch.tensor([]).cpu()
 
     end_time = time.time()
-    for i, data in enumerate(data_loader): # <-------------------------- what does enumerating the data_loader do?
+    for i, data in enumerate(data_loader): 
         # if there are no rois, no need to go through the model
         if opt.get('dataset', "ava") == "road_tube" and not data: 
             end_time = time.time()
@@ -281,7 +281,7 @@ def train_epoch(epoch, data_loader, model, criterion, optimizer, scheduler,
         curr_step = (epoch - 1) * len(data_loader) + i
         scheduler.step(curr_step)
 
-        ret = model(data) # <----------------------------------------- INTO THE MODEL WE GO! Once we get to this step, neck is next
+        ret = model(data)
         num_rois = ret['num_rois']
         outputs = ret['outputs']
         targets = ret['targets']

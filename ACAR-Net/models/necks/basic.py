@@ -35,7 +35,45 @@ class BasicNeck(nn.Module):
             # TODO add another loop here I think
             ''' BASED ON WHAT YOU HAVE DONE TO THE DATA LOADER, MAKE THE NECESSARY CHANGES TO ITERATE THROUGH EACH FRAME
             '''
-            for label in data['labels'][idx]: 
+            # for label in data['labels'][idx]: 
+            #     ''' label:
+            #         [{tube_uid, bounding_box, label (action_label)}, ...]
+            #     '''
+            #     cur_bbox_id += 1
+            #     if self.training and self.bbox_jitter is not None:
+            #         bbox_list = bbox_jitter(label['bounding_box'],
+            #                                 self.bbox_jitter.get('num', 1),
+            #                                 self.bbox_jitter.scale)
+            #     else:
+            #         # no bbox jittering during evaluation
+            #         bbox_list = [label['bounding_box']] # label needs to have multiple bboxes for each frame (ditto to the other part of the conditional statement)
+                
+            #     for b in bbox_list:
+            #         bbox = get_bbox_after_aug(aug_info, b, self.aug_threshold)
+            #         if bbox is None:
+            #             continue
+            #         rois.append([idx] + bbox) # this needs to change roi.append([idx] + bbox_frame_list)
+                    
+            #         filenames.append(data['filenames'][idx])
+            #         mid_times.append(data['mid_times'][idx])
+            #         bboxes.append(label['bounding_box'])
+            #         bbox_ids.append(cur_bbox_id)
+
+            #         if self.multi_class:
+            #             ret = torch.zeros(self.num_classes)
+            #             ret.put_(torch.LongTensor(label['label']), 
+            #                     torch.ones(len(label['label'])))
+            #         else:
+            #             ret = torch.LongTensor(label['label'])
+            #         targets.append(ret)
+                
+            # roi_ids.append(len(rois))
+            key_frame_labels = data['batch_labels'][idx][len(data['batch_labels'][idx]) // 2]
+
+            for label in key_frame_labels: # labels in the key frame
+                ''' label:
+                    [{tube_uid, bounding_box, label (action_label)}, ...]
+                '''
                 cur_bbox_id += 1
                 if self.training and self.bbox_jitter is not None:
                     bbox_list = bbox_jitter(label['bounding_box'],
@@ -66,6 +104,7 @@ class BasicNeck(nn.Module):
                 
             roi_ids.append(len(rois))
 
+
         num_rois = len(rois)
         if num_rois == 0:
             return {'num_rois': 0, 'rois': None, 'roi_ids': roi_ids, 'targets': None, 
@@ -77,7 +116,6 @@ class BasicNeck(nn.Module):
         return {'num_rois': num_rois, 'rois': rois, 'roi_ids': roi_ids, 'targets': targets, 
                 'sizes_before_padding': sizes_before_padding,
                 'filenames': filenames, 'mid_times': mid_times, 'bboxes': bboxes, 'bbox_ids': bbox_ids}
-
     
 def basic(**kwargs):
     model = BasicNeck(**kwargs)

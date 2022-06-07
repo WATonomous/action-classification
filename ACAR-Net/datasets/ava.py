@@ -170,6 +170,52 @@ class AVADataLoader(data.DataLoader):
         }
         return output
 
+class ROADDataLoader(data.DataLoader):
+    def __init__(self,
+                 dataset,
+                 batch_size=1,
+                 shuffle=False,
+                 sampler=None,
+                 batch_sampler=None,
+                 num_workers=0,
+                 pin_memory=False,
+                 drop_last=False,
+                 **kwargs):
+        super(AVADataLoader, self).__init__(
+            dataset=dataset, 
+            batch_size=batch_size, 
+            shuffle=shuffle, 
+            sampler=sampler, 
+            batch_sampler=batch_sampler, 
+            num_workers=num_workers,
+            collate_fn=self._collate_fn, 
+            pin_memory=pin_memory, 
+            drop_last=drop_last,
+            **kwargs
+        )
+
+    def _collate_fn(self, batch):
+        clips = [_['clip'] for _ in batch]
+        clips, pad_ratios = batch_pad(clips)
+        aug_info = []
+        for datum, pad_ratio in zip(batch, pad_ratios):
+            datum['aug_info']['pad_ratio'] = pad_ratio
+            aug_info.append(datum['aug_info'])
+        filenames = [_['video_name'] for _ in batch]
+        batch_labels = [_['clip_labels'] for _ in batch] # <----------------------- where labels are loaded... batch? oh yeah its list comprehension, but double check what batch is
+        ''' you can move onto the main.py after this
+        '''
+        mid_times = [_['mid_time'] for _ in batch]
+        
+        output = {
+            'clips': clips,
+            'aug_info': aug_info,
+            'filenames': filenames,
+            'batch_labels': batch_labels,
+            'mid_times': mid_times
+        }
+        return output
+
     
 class AVA(data.Dataset):
     def __init__(self,
@@ -414,6 +460,7 @@ class ROADTube(data.Dataset):
         self.temporal_transform = temporal_transform
 
     def append_new_data(self, video, ann_dict):
+        stride_counter = 0
         for frame in ann_dict['db'][video]['frames'].values():
             dp = {}
             frame_id = int(frame['input_image_id'])
@@ -428,15 +475,17 @@ class ROADTube(data.Dataset):
 
             dp['format_str'] = '%05d.jpg'
             dp['frame_rate'] = self.fps
-            dp['labels'] = []
+            dp['frame_labels'] = []
             
             if len(frame['annos']) > 0 and frame['annotated']:
                 for annon in frame['annos'].values():
                     label = {'tube_uid': annon['tube_uid'], 'bounding_box': annon['box'], 'label': annon['action_ids']}
-                    dp['labels'].append(label)
-
-            if frame_id % self.stride == 0:
-                self.data_stride.append(dp)
+                    dp['frame_labels'].append(label)
+                
+                stride_counter += 1
+                if stride_counter % self.stride == 0: # every stride'th labeled frame is a datapoint
+                    stride_counter = 0
+                    self.data_stride.append(dp)
 
             self.data.append(dp)
 
@@ -467,9 +516,9 @@ class ROADTube(data.Dataset):
         n_frames = self.data_stride[index]['n_frames']
         mid_time = str(self.data_stride[index]['time'])
         # target = [self.data[index]['labels']]
-        target = [] # dictionary of tube uids and their rois in the clip ([1, 1, 1, 1] is for an empty roi)
+        key_tube_uids = [label['tube_uid'] for label in self.data_stride[index]['frame_labels']]
+        clip_labels = []
         video_name = self.data_stride[index]['video']
-        empty_anno = True
         
         end_frame = start_frame + n_frames
         if end_frame > self.__len__:
@@ -480,12 +529,11 @@ class ROADTube(data.Dataset):
             frame_indices = self.temporal_transform(frame_indices)
         
         clip = []
-        # load clips, consolidate agent tracks via tube_uid
+        # load frames in a clip, consolidate agent tracks via tube_uid
         for i in range(len(frame_indices)):
-            if self.data[frame_indices[i]]['labels']: # if even one frame contains annotations, we retain it as a datapoint
-                empty_anno = False
+            clip_labels.append([label for label in self.data[frame_indices[i]]['frame_labels'] 
+                if label['tube_uid'] in key_tube_uids])
 
-            target.append([self.data[frame_indices[i]]['labels']])
             image_path = os.path.join(path, frame_format%frame_indices[i])
             try:
                 with Image.open(image_path) as img:
@@ -495,11 +543,8 @@ class ROADTube(data.Dataset):
             clip.append(img)
 
         clip, aug_info = self._spatial_transform(clip)
-
-        if empty_anno: # we reject this clip as a datapoint (no labels to consider)
-            return None
         
-        return {'clip': clip, 'aug_info': aug_info, 'label': target, 
+        return {'clip': clip, 'aug_info': aug_info, 'clip_labels': clip_labels, 
                 'video_name': video_name, 'mid_time': mid_time}
 
     def __len__(self):
