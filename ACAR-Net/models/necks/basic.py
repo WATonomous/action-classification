@@ -20,8 +20,6 @@ class BasicNeck(nn.Module):
 
     # data: aug_info, labels, filenames, mid_times
     # returns: num_rois, rois, roi_ids, targets, sizes_before_padding, filenames, mid_times, bboxes, bbox_ids
-    # TODO change the number of rois coming into here, make sure that each group of rois share the same id
-    # invalid roi is [batch_num, 1, 1, 1, 1]
     def forward(self, data):
         roi_ids, targets, sizes_before_padding, filenames, mid_times = [0], [], [], [], []
         bboxes, bbox_ids = [], []  # used for multi-crop fusion
@@ -39,8 +37,8 @@ class BasicNeck(nn.Module):
             ''' BASED ON WHAT YOU HAVE DONE TO THE DATA LOADER, MAKE THE NECESSARY CHANGES TO ITERATE THROUGH EACH FRAME
             '''
             # labels in the key frame
-            key_labels = data['labels'][idx][len(data['labels'][idx])]
-            for label in key_labels: # set target action labels and tube_uids
+            key_labels = data['batch_labels'][idx][len(data['batch_labels'][idx]) // 2]
+            for label in key_labels: # set key frame action labels and tube_uids
                 repeat = False
                 if self.training and self.bbox_jitter is not None: # jittering causes duplicates
                     repeat = True
@@ -74,19 +72,19 @@ class BasicNeck(nn.Module):
             roi_ids.append(roi_id)
             
             # produce rois according to tube_uids in the key frame
-            for frame_labels in data['labels'][idx]:
+            for frame_labels in data['batch_labels'][idx]:
                 frame_rois = torch.ones(roi_ids[-1] - roi_ids[-2], len(data['clips'][idx]), 5).cuda()
                 frame_rois[:, :, 0] = idx
 
                 for label, label_idx in zip(frame_labels, range(len(frame_labels))):
-                    # jitter is a robustness step, it produces a seperate set of bboxes which vary slightly in size from the originals
+                    # jitter is a robustness step, it produces a seperate set of bboxes which vary slightly in size and shape from the originals
                     if self.training and self.bbox_jitter is not None:
                         bbox_and_jitter = bbox_jitter(label['bounding_box'],
                                                 self.bbox_jitter.get('num', 1),
                                                 self.bbox_jitter.scale)
                     else:
                         # no bbox jittering during evaluation
-                        bbox_and_jitter = [label['bounding_box']] # label needs to have multiple bboxes for each frame (ditto to the other part of the conditional statement)
+                        bbox_and_jitter = [label['bounding_box']]
                     
                     uid_idx = 0
                     for b in bbox_and_jitter:
@@ -94,6 +92,7 @@ class BasicNeck(nn.Module):
                         if bbox is None:
                             continue
                         frame_rois[key_tube_uids[label['tube_uid']][uid_idx], label_idx, 1:] = torch.tensor(bbox)
+                        uid_idx += 1
 
                 if rois is None:
                     rois = frame_rois

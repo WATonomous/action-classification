@@ -187,14 +187,24 @@ def main(local_rank, args):
 
     val_sampler = DistributedSampler(val_data, round_down=False)
 
-    val_loader = ava.AVAmulticropDataLoader(
+    if opt.get('dataset', "ava") == "road_tube":   
+        val_loader = ava.ROADmulticropDataLoader(
         val_data,
         batch_size=opt.val.batch_size,
         shuffle=False,
         num_workers=opt.val.get('workers', 1),
         pin_memory=True,
         sampler=val_sampler
-    )
+        )
+    else:
+        val_loader = ava.AVAmulticropDataLoader(
+            val_data,
+            batch_size=opt.val.batch_size,
+            shuffle=False,
+            num_workers=opt.val.get('workers', 1),
+            pin_memory=True,
+            sampler=val_sampler
+        )
     
     val_logger = None
     if rank == 0:

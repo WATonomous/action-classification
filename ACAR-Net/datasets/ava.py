@@ -574,6 +574,31 @@ class AVAmulticropDataLoader(AVADataLoader):
             'mid_times': mid_times
         }
         return output
+
+
+class ROADmulticropDataLoader(ROADDataLoader):
+    def _collate_fn(self, batch):
+        clips, aug_info = [], []
+        for i in range(len(batch[0]['clip'])):
+            clip, pad_ratios = batch_pad([_['clip'][i] for _ in batch])
+            clips.append(clip)
+            cur_aug_info = []
+            for datum, pad_ratio in zip(batch, pad_ratios):
+                datum['aug_info'][i]['pad_ratio'] = pad_ratio
+                cur_aug_info.append(datum['aug_info'][i])
+            aug_info.append(cur_aug_info)
+        filenames = [_['video_name'] for _ in batch]
+        batch_labels = [_['clip_labels'] for _ in batch]
+        mid_times = [_['mid_time'] for _ in batch]
+        
+        output = {
+            'clips': clips,
+            'aug_info': aug_info,
+            'filenames': filenames,
+            'batch_labels': batch_labels,
+            'mid_times': mid_times
+        }
+        return output
     
     
 class AVAmulticrop(AVA):
