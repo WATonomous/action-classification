@@ -21,6 +21,9 @@ class Test():
 
 
 if __name__ == '__main__':
-    print(list(range(3, 5)))
+    test = torch.ones(3, 4, 5)
+    test[2, 3, 1:] = torch.tensor([2, 3, 4, 5])
+
+    print(test)
     
     

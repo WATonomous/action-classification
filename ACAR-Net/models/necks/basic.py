@@ -23,10 +23,13 @@ class BasicNeck(nn.Module):
     # TODO change the number of rois coming into here, make sure that each group of rois share the same id
     # invalid roi is [batch_num, 1, 1, 1, 1]
     def forward(self, data):
-        rois, roi_ids, targets, sizes_before_padding, filenames, mid_times = [], [0], [], [], [], []
+        roi_ids, targets, sizes_before_padding, filenames, mid_times = [0], [], [], [], []
         bboxes, bbox_ids = [], []  # used for multi-crop fusion
+        rois = None
+        key_tube_uids = {}
 
-        cur_bbox_id = -1  # record current bbox no.
+        cur_bbox_id = -1
+        roi_id = 0
         for idx in range(len(data['aug_info'])): # idx is batch num
             aug_info = data['aug_info'][idx]
             pad_ratio = aug_info['pad_ratio']
@@ -35,60 +38,16 @@ class BasicNeck(nn.Module):
             # TODO add another loop here I think
             ''' BASED ON WHAT YOU HAVE DONE TO THE DATA LOADER, MAKE THE NECESSARY CHANGES TO ITERATE THROUGH EACH FRAME
             '''
-            # for label in data['labels'][idx]: 
-            #     ''' label:
-            #         [{tube_uid, bounding_box, label (action_label)}, ...]
-            #     '''
-            #     cur_bbox_id += 1
-            #     if self.training and self.bbox_jitter is not None:
-            #         bbox_list = bbox_jitter(label['bounding_box'],
-            #                                 self.bbox_jitter.get('num', 1),
-            #                                 self.bbox_jitter.scale)
-            #     else:
-            #         # no bbox jittering during evaluation
-            #         bbox_list = [label['bounding_box']] # label needs to have multiple bboxes for each frame (ditto to the other part of the conditional statement)
+            # labels in the key frame
+            key_labels = data['labels'][idx][len(data['labels'][idx])]
+            for label in key_labels: # set target action labels and tube_uids
+                repeat = False
+                if self.training and self.bbox_jitter is not None: # jittering causes duplicates
+                    repeat = True
                 
-            #     for b in bbox_list:
-            #         bbox = get_bbox_after_aug(aug_info, b, self.aug_threshold)
-            #         if bbox is None:
-            #             continue
-            #         rois.append([idx] + bbox) # this needs to change roi.append([idx] + bbox_frame_list)
-                    
-            #         filenames.append(data['filenames'][idx])
-            #         mid_times.append(data['mid_times'][idx])
-            #         bboxes.append(label['bounding_box'])
-            #         bbox_ids.append(cur_bbox_id)
-
-            #         if self.multi_class:
-            #             ret = torch.zeros(self.num_classes)
-            #             ret.put_(torch.LongTensor(label['label']), 
-            #                     torch.ones(len(label['label'])))
-            #         else:
-            #             ret = torch.LongTensor(label['label'])
-            #         targets.append(ret)
-                
-            # roi_ids.append(len(rois))
-            key_frame_labels = data['batch_labels'][idx][len(data['batch_labels'][idx]) // 2]
-
-            for label in key_frame_labels: # labels in the key frame
-                ''' label:
-                    [{tube_uid, bounding_box, label (action_label)}, ...]
-                '''
-                cur_bbox_id += 1
-                if self.training and self.bbox_jitter is not None:
-                    bbox_list = bbox_jitter(label['bounding_box'],
-                                            self.bbox_jitter.get('num', 1),
-                                            self.bbox_jitter.scale)
-                else:
-                    # no bbox jittering during evaluation
-                    bbox_list = [label['bounding_box']] # label needs to have multiple bboxes for each frame (ditto to the other part of the conditional statement)
-                
-                for b in bbox_list:
-                    bbox = get_bbox_after_aug(aug_info, b, self.aug_threshold)
-                    if bbox is None:
-                        continue
-                    rois.append([idx] + bbox) # this needs to change roi.append([idx] + bbox_frame_list)
-                    
+                done = False
+                while not done:
+                    roi_id += 1
                     filenames.append(data['filenames'][idx])
                     mid_times.append(data['mid_times'][idx])
                     bboxes.append(label['bounding_box'])
@@ -100,10 +59,46 @@ class BasicNeck(nn.Module):
                                 torch.ones(len(label['label'])))
                     else:
                         ret = torch.LongTensor(label['label'])
-                    targets.append(ret)
-                
-            roi_ids.append(len(rois))
 
+                    targets.append(ret)
+                    if key_tube_uids[label['tube_uid']]:
+                        key_tube_uids[label['tube_uid']].append(roi_id)
+                    else:
+                        key_tube_uids[label['tube_uid']] = [roi_id]
+
+                    if repeat:
+                        repeat = False
+                    if not repeat:
+                        done = True
+
+            roi_ids.append(roi_id)
+            
+            # produce rois according to tube_uids in the key frame
+            for frame_labels in data['labels'][idx]:
+                frame_rois = torch.ones(roi_ids[-1] - roi_ids[-2], len(data['clips'][idx]), 5).cuda()
+                frame_rois[:, :, 0] = idx
+
+                for label, label_idx in zip(frame_labels, range(len(frame_labels))):
+                    # jitter is a robustness step, it produces a seperate set of bboxes which vary slightly in size from the originals
+                    if self.training and self.bbox_jitter is not None:
+                        bbox_and_jitter = bbox_jitter(label['bounding_box'],
+                                                self.bbox_jitter.get('num', 1),
+                                                self.bbox_jitter.scale)
+                    else:
+                        # no bbox jittering during evaluation
+                        bbox_and_jitter = [label['bounding_box']] # label needs to have multiple bboxes for each frame (ditto to the other part of the conditional statement)
+                    
+                    uid_idx = 0
+                    for b in bbox_and_jitter:
+                        bbox = get_bbox_after_aug(aug_info, b, self.aug_threshold)
+                        if bbox is None:
+                            continue
+                        frame_rois[key_tube_uids[label['tube_uid']][uid_idx], label_idx, 1:] = torch.tensor(bbox)
+
+                if rois is None:
+                    rois = frame_rois
+                else:
+                    rois = torch.cat((rois, frame_rois), 0)        
 
         num_rois = len(rois)
         if num_rois == 0:
