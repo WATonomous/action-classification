@@ -2,7 +2,7 @@ evaluate: False
 result_path: ./output/text # same for any experiment in dvc world
 tensorboard_path: ./output/tensorboard
 model_path: ./output/saved_models # where the model is saved
-resume_path: ckpt_6_base.pth.tar
+# resume_path: ckpt_6_base.pth.tar
 manual_seed: 1
 print_freq: 20
 dataset: "road"

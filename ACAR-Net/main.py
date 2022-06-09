@@ -430,7 +430,7 @@ def train_epoch(epoch, data_loader, model, criterion, optimizer, scheduler,
         
         logger.info('-' * 100)
         
-    tensorboard_funcs.add_model_weights_as_histogram(model, writer, epoch)            
+        tensorboard_funcs.add_model_weights_as_histogram(model, writer, epoch)            
 
 def val_epoch(epoch, data_loader, model, criterion, act_func,
               opt, logger, epoch_logger, rank, world_size, writer):
