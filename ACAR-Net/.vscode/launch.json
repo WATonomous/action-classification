@@ -11,7 +11,7 @@
             "program": "main.py",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["--config", "configs/ROAD/SLOWFAST_R50_ACAR_HR2O.yaml", "--nproc_per_node", "1"]
+            "args": ["--config", "configs/ROAD/config.yaml", "--nproc_per_node", "1"]
         },
         {
             "name": "Probe",

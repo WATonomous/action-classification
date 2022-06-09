@@ -465,7 +465,7 @@ def train_epoch(epoch, data_loader, model, criterion, optimizer, scheduler,
         
         logger.info('-' * 100)
         
-    tensorboard_funcs.add_model_weights_as_histogram(model, writer, epoch)            
+        tensorboard_funcs.add_model_weights_as_histogram(model, writer, epoch)            
 
 def val_epoch(epoch, data_loader, model, criterion, act_func,
               opt, logger, epoch_logger, rank, world_size, writer):
@@ -610,12 +610,10 @@ if __name__ == '__main__':
     with open(args.config) as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
     opt = EasyDict(config)
-    args.nproc_per_node = opt.nproc_per_node # hack to make the rest of the code work
-
     # if we're debugging, don't log anything
 
     ####################################################
     # To turn off wandb, run: export WANDB_MODE=offline
     ####################################################
-
-    torch.multiprocessing.spawn(main, args=(args,), nprocs=opt.nproc_per_node)
+    wandb.init()
+    torch.multiprocessing.spawn(main, args=(args,), nprocs=args.nproc_per_node)
