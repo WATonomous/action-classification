@@ -95,6 +95,8 @@ class ACARHead(nn.Module):
         h, w = feats[0].shape[3:]
         roi_slow_feats = []
         roi_fast_feats = []
+        roi_slow_feats_nonzero = []
+        roi_fast_feats_nonzero = [] 
 
         # for each temporal fast encoding, roi align
         alpha = int(feats[1].shape[2] / feats[0].shape[2])
@@ -102,27 +104,28 @@ class ACARHead(nn.Module):
 
             if (idx + 1) % alpha == 0: # for each temporal slow encoding
                 f_s = feats[0][:, :, int(idx / alpha)]
-                rois = data['rois'][:, idx] # roi for every alpha frame
+                rois = data['rois'][:, idx].detach() # roi for every alpha frame
                 
-                roi_slow_feats.append(self.head_roi_align(rois, f_s, h, w))
+                roi_slow_feats_nonzero.append(~(rois[:, 1:]==1).all(1)) # mask for filtering invalid rois
+                roi_slow_feats.append(self.head_roi_align(rois.clone(), f_s, h, w))
 
             f_f = feats[1][:, :, idx]
-            rois = data['rois'][:, idx] # roi for every frame
+            rois = data['rois'][:, idx].detach() # roi for every frame
 
-            roi_fast_feats.append(self.head_roi_align(rois, f_f, h, w))
+            roi_fast_feats_nonzero.append(~(rois[:, 1:]==1).all(1)) # mask for filtering invalid rois
+            roi_fast_feats.append(self.head_roi_align(rois.clone(), f_f, h, w))
             
         # stack pooled fast and slow roi alignments
         roi_slow_feats = torch.stack(roi_slow_feats, dim=2) 
         roi_fast_feats = torch.stack(roi_fast_feats, dim=2) 
+        roi_slow_feats_nonzero = torch.stack(roi_slow_feats_nonzero, dim=1)
+        roi_fast_feats_nonzero = torch.stack(roi_fast_feats_nonzero, dim=1)
 
         # filter out invalid rois and avg pool
-        roi_slow_feats_nonzero = (roi_slow_feats!=0).all(4).all(3).all(1) 
-        roi_fast_feats_nonzero = (roi_fast_feats!=0).all(4).all(3).all(1) 
-        
-        roi_slow_feats = [nn.AdaptiveAvgPool3d((1, self.roi_spatial, self.roi_spatial))(roi_slow_feats[idx, :, s_f]) 
-            for s_f, idx in zip(roi_slow_feats_nonzero, range(len(roi_slow_feats_nonzero)))]
-        roi_fast_feats = [nn.AdaptiveAvgPool3d((1, self.roi_spatial, self.roi_spatial))(roi_fast_feats[idx, :, f_f]) 
-            for f_f, idx in zip(roi_fast_feats_nonzero, range(len(roi_fast_feats_nonzero)))]
+        roi_slow_feats = [nn.AdaptiveAvgPool3d((1, self.roi_spatial, self.roi_spatial))(roi_slow_feats[idx, :, s_mask]) 
+            for s_mask, idx in zip(roi_slow_feats_nonzero, range(len(roi_slow_feats_nonzero)))]
+        roi_fast_feats = [nn.AdaptiveAvgPool3d((1, self.roi_spatial, self.roi_spatial))(roi_fast_feats[idx, :, f_mask]) 
+            for f_mask, idx in zip(roi_fast_feats_nonzero, range(len(roi_fast_feats_nonzero)))]
 
         # stack pooled fast and slow roi alignments, squeeze frame dim
         roi_slow_feats = torch.stack(roi_slow_feats, dim=0).squeeze(dim=2)

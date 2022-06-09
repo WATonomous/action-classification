@@ -37,67 +37,50 @@ class BasicNeck(nn.Module):
             ''' BASED ON WHAT YOU HAVE DONE TO THE DATA LOADER, MAKE THE NECESSARY CHANGES TO ITERATE THROUGH EACH FRAME
             '''
             # labels in the key frame
-            key_labels = data['batch_labels'][idx][len(data['batch_labels'][idx]) // 2]
+            key_labels = data['batch_labels'][idx][(len(data['batch_labels'][idx]) // 2) - 1]
             for label in key_labels: # set key frame action labels and tube_uids
-                repeat = False
-                if self.training and self.bbox_jitter is not None: # jittering causes duplicates
-                    repeat = True
-                
-                done = False
-                while not done:
-                    roi_id += 1
-                    filenames.append(data['filenames'][idx])
-                    mid_times.append(data['mid_times'][idx])
-                    bboxes.append(label['bounding_box'])
-                    bbox_ids.append(cur_bbox_id)
+                roi_id += 1
+                filenames.append(data['filenames'][idx])
+                mid_times.append(data['mid_times'][idx])
+                bboxes.append(label['bounding_box'])
+                bbox_ids.append(cur_bbox_id)
 
-                    if self.multi_class:
-                        ret = torch.zeros(self.num_classes)
-                        ret.put_(torch.LongTensor(label['label']), 
-                                torch.ones(len(label['label'])))
-                    else:
-                        ret = torch.LongTensor(label['label'])
+                if self.multi_class:
+                    ret = torch.zeros(self.num_classes)
+                    ret.put_(torch.LongTensor(label['label']), 
+                            torch.ones(len(label['label'])))
+                else:
+                    ret = torch.LongTensor(label['label'])
 
-                    targets.append(ret)
-                    if key_tube_uids[label['tube_uid']]:
-                        key_tube_uids[label['tube_uid']].append(roi_id)
-                    else:
-                        key_tube_uids[label['tube_uid']] = [roi_id]
+                targets.append(ret)
 
-                    if repeat:
-                        repeat = False
-                    if not repeat:
-                        done = True
-
+                key_tube_uids[label['tube_uid']] = roi_id - 1
+                    
             roi_ids.append(roi_id)
             
             # produce rois according to tube_uids in the key frame
-            for frame_labels in data['batch_labels'][idx]:
-                frame_rois = torch.ones(roi_ids[-1] - roi_ids[-2], len(data['clips'][idx]), 5).cuda()
-                frame_rois[:, :, 0] = idx
-
-                for label, label_idx in zip(frame_labels, range(len(frame_labels))):
-                    # jitter is a robustness step, it produces a seperate set of bboxes which vary slightly in size and shape from the originals
+            frame_rois = torch.ones(roi_ids[-1] - roi_ids[-2], data['clips'][idx].shape[1], 5).cuda()
+            frame_rois[:, :, 0] = idx
+            for frame_labels, frame_idx in zip(data['batch_labels'][idx], range(len(data['batch_labels'][idx]))):
+                for label in frame_labels:
+                    # jitter is a robustness step, it produces a bbox which varies slightly in size and shape from the original
                     if self.training and self.bbox_jitter is not None:
-                        bbox_and_jitter = bbox_jitter(label['bounding_box'],
+                        bbox_with_jitter = bbox_jitter(label['bounding_box'],
                                                 self.bbox_jitter.get('num', 1),
                                                 self.bbox_jitter.scale)
                     else:
                         # no bbox jittering during evaluation
-                        bbox_and_jitter = [label['bounding_box']]
+                        bbox_with_jitter = label['bounding_box']
                     
-                    uid_idx = 0
-                    for b in bbox_and_jitter:
-                        bbox = get_bbox_after_aug(aug_info, b, self.aug_threshold)
-                        if bbox is None:
-                            continue
-                        frame_rois[key_tube_uids[label['tube_uid']][uid_idx], label_idx, 1:] = torch.tensor(bbox)
-                        uid_idx += 1
-
-                if rois is None:
-                    rois = frame_rois
-                else:
-                    rois = torch.cat((rois, frame_rois), 0)        
+                    bbox = get_bbox_after_aug(aug_info, bbox_with_jitter, self.aug_threshold)
+                    if bbox is None:
+                        continue
+                    frame_rois[key_tube_uids[label['tube_uid']] - roi_ids[-2], frame_idx, 1:] = torch.tensor(bbox)
+    
+            if rois is None: 
+                rois = frame_rois
+            else:
+                rois = torch.cat((rois, frame_rois), 0)        
 
         num_rois = len(rois)
         if num_rois == 0:
@@ -105,7 +88,6 @@ class BasicNeck(nn.Module):
                     'sizes_before_padding': sizes_before_padding,
                     'filenames': filenames, 'mid_times': mid_times, 'bboxes': bboxes, 'bbox_ids': bbox_ids}
         
-        rois = torch.FloatTensor(rois).cuda()
         targets = torch.stack(targets, dim=0).cuda()
         return {'num_rois': num_rois, 'rois': rois, 'roi_ids': roi_ids, 'targets': targets, 
                 'sizes_before_padding': sizes_before_padding,

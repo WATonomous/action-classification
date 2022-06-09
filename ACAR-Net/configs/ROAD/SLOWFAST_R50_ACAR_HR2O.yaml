@@ -6,7 +6,7 @@ model_path: /home/agehlan/saved_models/thor_gpu1
 resume_path:
 manual_seed: 1
 print_freq: 20
-dataset: "road"
+dataset: "road_tube"
 experiment_name: "baseline"
 
 class_list: ["Red", "Amber", "Green",

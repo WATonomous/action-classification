@@ -1,7 +1,9 @@
+from distutils.log import ERROR
 from PIL import Image
 import os
 import pickle
 import json
+from cv2 import sepFilter2D
 import numpy as np
 import io
 from iopath.common.file_io import g_pathmgr
@@ -181,7 +183,7 @@ class ROADDataLoader(data.DataLoader):
                  pin_memory=False,
                  drop_last=False,
                  **kwargs):
-        super(AVADataLoader, self).__init__(
+        super(ROADDataLoader, self).__init__(
             dataset=dataset, 
             batch_size=batch_size, 
             shuffle=shuffle, 
@@ -423,7 +425,7 @@ class ROADTube(data.Dataset):
         self.data_stride = [] # stores the stride'th frame
         self.fps = 12
         self.num_frames_in_clip = 91
-        self.stride = 32 # distributed sampling, > stride means more unique data but less data points
+        self.stride = 4 # distributed sampling, > stride means more unique data but less data points
 
         with open(annotation_path, "r") as f:
             if split == "train_1":
@@ -463,29 +465,38 @@ class ROADTube(data.Dataset):
         stride_counter = 0
         for frame in ann_dict['db'][video]['frames'].values():
             dp = {}
-            frame_id = int(frame['input_image_id'])
+            frame_id = int(frame['rgb_image_id'])
             dp['video'] = video
             dp['time'] = frame_id
             dp['midframe'] = frame_id
-            dp['start_frame'] = max(0, frame_id - self.num_frames_in_clip // 2)
             dp['n_frames'] = self.num_frames_in_clip
-
-            if dp['start_frame'] + dp['n_frames'] - 1 > ann_dict['db'][video]['numf']:
-                dp['n_frames'] = ann_dict['db'][video]['numf'] - dp['start_frame'] + 1
 
             dp['format_str'] = '%05d.jpg'
             dp['frame_rate'] = self.fps
             dp['frame_labels'] = []
             
-            if len(frame['annos']) > 0 and frame['annotated']:
+            if frame['annotated']:
                 for annon in frame['annos'].values():
                     label = {'tube_uid': annon['tube_uid'], 'bounding_box': annon['box'], 'label': annon['action_ids']}
                     dp['frame_labels'].append(label)
                 
                 stride_counter += 1
+                self.data.append(dp)
+
                 if stride_counter % self.stride == 0: # every stride'th labeled frame is a datapoint
                     stride_counter = 0
+
+                    # if clip made from stride'th frame is incomplete, we do not consider it 
+                    # (problems with temporal center crop not producing stable labels)
+                    if frame_id - 1 + (self.num_frames_in_clip // 2) > ann_dict['db'][video]['numf']:
+                        break
+                    elif frame_id - 1 - (self.num_frames_in_clip // 2) < 0:
+                        continue
+                    
+                    dp['start_frame'] = len(self.data) + 1 - (self.num_frames_in_clip // 2)
                     self.data_stride.append(dp)
+                
+                continue
 
             self.data.append(dp)
 
@@ -498,8 +509,10 @@ class ROADTube(data.Dataset):
         
 
     def _spatial_transform(self, clip):
+        # print("this is the clip length in sp:" + str(len(clip)))
         if self.spatial_transform is not None:
             init_size = clip[0].size[:2]
+
             params = self.spatial_transform.randomize_parameters()
             aug_info = get_aug_info(init_size, params)
             
@@ -510,19 +523,19 @@ class ROADTube(data.Dataset):
         return clip, aug_info
 
     def __getitem__(self, index): # this might be more important actually 
-        path = os.path.join(self.root_path, self.data[index]['video'])
+        path = os.path.join(self.root_path, self.data_stride[index]['video'])
         frame_format = self.data_stride[index]['format_str']
         start_frame = self.data_stride[index]['start_frame']
         n_frames = self.data_stride[index]['n_frames']
         mid_time = str(self.data_stride[index]['time'])
-        # target = [self.data[index]['labels']]
-        key_tube_uids = [label['tube_uid'] for label in self.data_stride[index]['frame_labels']]
+        key_tube_uids = [label['tube_uid'] # must remain constant going into ACAR Neck
+            for label in self.data_stride[index]['frame_labels']]
         clip_labels = []
         video_name = self.data_stride[index]['video']
         
         end_frame = start_frame + n_frames
-        if end_frame > self.__len__:
-            end_frame = self.__len__ 
+        if end_frame > len(self.data):
+            end_frame = len(self.data) 
 
         frame_indices = list(range(start_frame, end_frame))
         if self.temporal_transform is not None:
@@ -534,7 +547,7 @@ class ROADTube(data.Dataset):
             clip_labels.append([label for label in self.data[frame_indices[i]]['frame_labels'] 
                 if label['tube_uid'] in key_tube_uids])
 
-            image_path = os.path.join(path, frame_format%frame_indices[i])
+            image_path = os.path.join(path, frame_format%self.data[frame_indices[i]]['time'])
             try:
                 with Image.open(image_path) as img:
                     img = img.convert('RGB')
@@ -548,7 +561,7 @@ class ROADTube(data.Dataset):
                 'video_name': video_name, 'mid_time': mid_time}
 
     def __len__(self):
-        return len(self.data)
+        return len(self.data_stride)
 
     
 class AVAmulticropDataLoader(AVADataLoader):

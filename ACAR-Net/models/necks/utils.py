@@ -6,8 +6,8 @@ def bbox_jitter(bbox, num, delta):
     
     if num == 1:
         jitter = np.random.uniform(-delta, delta, 4)
-        bboxes = [[max(bbox[0] + jitter[0] * w, 0.), min(bbox[1] + jitter[1] * h, 1.),
-                   max(bbox[2] + jitter[2] * w, 0.), min(bbox[3] + jitter[3] * h, 1.)]]
+        bboxes = [max(bbox[0] + jitter[0] * w, 0.), min(bbox[1] + jitter[1] * h, 1.),
+                   max(bbox[2] + jitter[2] * w, 0.), min(bbox[3] + jitter[3] * h, 1.)]
                    
         return bboxes
     

@@ -101,7 +101,8 @@ def main(local_rank, args):
 
         train_sampler = DistributedSampler(train_data, round_down=True)
 
-        train_loader = ava.AVADataLoader(    
+        if opt.get('dataset', "ava") == "road_tube":
+            train_loader = ava.ROADDataLoader(    
             train_data,
             batch_size=opt.train.batch_size,
             shuffle=False,
@@ -109,7 +110,17 @@ def main(local_rank, args):
             pin_memory=True,
             sampler=train_sampler,
             drop_last=True
-        )
+            )
+        else:
+            train_loader = ava.AVADataLoader(    
+                train_data,
+                batch_size=opt.train.batch_size,
+                shuffle=False,
+                num_workers=opt.train.get('workers', 1),
+                pin_memory=True,
+                sampler=train_sampler,
+                drop_last=True
+            )
         
         if rank == 0:
             logger.info('# train data: {}'.format(len(train_data)))
@@ -168,7 +179,7 @@ def main(local_rank, args):
             temporal_transform,
         )
     elif opt.get('dataset', "ava") == "road_tube":
-        train_data = ava.ROADTube(
+        val_data = ava.ROADTube(
             opt.train.root_path,
             opt.train.annotation_path, 
             opt.train.class_idx_path,
@@ -267,7 +278,7 @@ def train_epoch(epoch, data_loader, model, criterion, optimizer, scheduler,
                 opt, logger, epoch_logger, batch_logger, rank, world_size, writer):
     if rank == 0:
         logger.info('Training at epoch {}'.format(epoch))
-        
+
     model.train()
     
     batch_time = AverageMeter(opt.print_freq)
@@ -281,11 +292,6 @@ def train_epoch(epoch, data_loader, model, criterion, optimizer, scheduler,
 
     end_time = time.time()
     for i, data in enumerate(data_loader): 
-        # if there are no rois, no need to go through the model
-        if opt.get('dataset', "ava") == "road_tube" and not data: 
-            end_time = time.time()
-            continue
-
         data_time.update(time.time() - end_time)
 
         curr_step = (epoch - 1) * len(data_loader) + i
@@ -522,5 +528,5 @@ if __name__ == '__main__':
     parser.add_argument('--nnodes', type=int, default=None)
     parser.add_argument('--node_rank', type=int, default=None)
     args = parser.parse_args()
-
+    
     torch.multiprocessing.spawn(main, args=(args,), nprocs=args.nproc_per_node)
