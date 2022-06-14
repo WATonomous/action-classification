@@ -39,6 +39,7 @@ class BasicNeck(nn.Module):
             # labels in the key frame
             key_labels = data['batch_labels'][idx][(len(data['batch_labels'][idx]) // 2) - 1]
             for label in key_labels: # set key frame action labels and tube_uids
+                cur_bbox_id += 1
                 roi_id += 1
                 filenames.append(data['filenames'][idx])
                 mid_times.append(data['mid_times'][idx])
@@ -59,7 +60,7 @@ class BasicNeck(nn.Module):
             roi_ids.append(roi_id)
             
             # produce rois according to tube_uids in the key frame
-            frame_rois = torch.ones(roi_ids[-1] - roi_ids[-2], data['clips'][idx].shape[1], 5).cuda()
+            frame_rois = torch.ones(roi_ids[-1] - roi_ids[-2], len(data['batch_labels'][idx]), 5).cuda()
             frame_rois[:, :, 0] = idx
             for frame_labels, frame_idx in zip(data['batch_labels'][idx], range(len(data['batch_labels'][idx]))):
                 for label in frame_labels:

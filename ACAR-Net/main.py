@@ -72,9 +72,12 @@ def main(local_rank, args):
     if rank == 0:
         if not opt.experiment_name:
             raise ValueError("No experiment name specified in run config.")
-        else:
-            wandb.init(project='acar', name = opt.experiment_name, sync_tensorboard=True)
+        
+        wandb.init(project='acar', name = opt.experiment_name, sync_tensorboard=True)
+
+        # to deal with other signals, especially during debug sessions and the presense of child processes
         signal.signal(signal.SIGINT, handler)
+
         mkdir(opt.result_path)
         mkdir(os.path.join(opt.result_path, 'tmp'))
         with open(os.path.join(opt.result_path, f'opts.json'), 'w') as opt_file:
@@ -231,7 +234,7 @@ def main(local_rank, args):
             temporal_transform,
         )
     elif opt.get('dataset', "ava") == "road_tube":
-        val_data = ava.ROADTube(
+        val_data = ava.ROADTubemulticrop(
             opt.train.root_path,
             opt.train.annotation_path, 
             opt.train.class_idx_path,
@@ -489,7 +492,6 @@ def val_epoch(epoch, data_loader, model, criterion, act_func,
 
     end_time = time.time()
     for i, data in enumerate(data_loader):
-
         data_time.update(time.time() - end_time)
 
         with torch.no_grad():
@@ -504,7 +506,6 @@ def val_epoch(epoch, data_loader, model, criterion, act_func,
         batch_pred_prob = ava_pose_softmax_func(outputs)
         val_epoch_pred_prob = torch.cat( (val_epoch_pred_prob, batch_pred_prob.detach().cpu()), axis=0 )
         val_epoch_targets = torch.cat( (val_epoch_targets, targets.detach().cpu()), axis=0 )
-
 
         if calc_loss:
             loss = criterion(outputs, targets)
@@ -615,5 +616,4 @@ if __name__ == '__main__':
     ####################################################
     # To turn off wandb, run: export WANDB_MODE=offline
     ####################################################
-    wandb.init()
     torch.multiprocessing.spawn(main, args=(args,), nprocs=args.nproc_per_node)

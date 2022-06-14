@@ -21,7 +21,7 @@ class AVA_model(nn.Module):
             o_b = self.backbone(i_b)
 
             i_n = {'aug_info': data['aug_info'], 'batch_labels': data['batch_labels'], 
-                   'filenames': data['filenames'], 'mid_times': data['mid_times'], 'clips': data['clips']}
+                   'filenames': data['filenames'], 'mid_times': data['mid_times']}
             o_n = self.neck(i_n)
 
             if o_n['num_rois'] == 0:
@@ -43,7 +43,7 @@ class AVA_model(nn.Module):
         
         noaug_info = [{'crop_box': [0., 0., 1., 1.], 'flip': False, 'pad_ratio': [1., 1.]}] * len(data['batch_labels'])
         i_n = {'aug_info': noaug_info, 'batch_labels': data['batch_labels'], 
-               'filenames': data['filenames'], 'mid_times': data['mid_times'], 'clips': data['clips']}
+               'filenames': data['filenames'], 'mid_times': data['mid_times']}
         o = self.neck(i_n)
         
         output_list = [None] * len(o['filenames'])
@@ -54,7 +54,7 @@ class AVA_model(nn.Module):
             o_b = self.backbone(i_b)
             
             i_n = {'aug_info': data['aug_info'][no], 'batch_labels': data['batch_labels'], 
-                   'filenames': data['filenames'], 'mid_times': data['mid_times'], 'clips': data['clips']}
+                   'filenames': data['filenames'], 'mid_times': data['mid_times']}
             o_n = self.neck(i_n)
             
             if o_n['num_rois'] == 0:

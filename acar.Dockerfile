@@ -29,7 +29,7 @@ RUN pip install \
 	pandas \
 	sklearn \
 	Pillow \
-        av \
+    av \
 	wandb \
 	ffmpeg \
 	moviepy \

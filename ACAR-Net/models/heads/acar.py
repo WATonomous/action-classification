@@ -122,6 +122,7 @@ class ACARHead(nn.Module):
         roi_fast_feats_nonzero = torch.stack(roi_fast_feats_nonzero, dim=1)
 
         # filter out invalid rois and avg pool
+        # TODO: error here, some slow encoding masks are compeltely false. This should not happen, the one box is on frame 16 in fast
         roi_slow_feats = [nn.AdaptiveAvgPool3d((1, self.roi_spatial, self.roi_spatial))(roi_slow_feats[idx, :, s_mask]) 
             for s_mask, idx in zip(roi_slow_feats_nonzero, range(len(roi_slow_feats_nonzero)))]
         roi_fast_feats = [nn.AdaptiveAvgPool3d((1, self.roi_spatial, self.roi_spatial))(roi_fast_feats[idx, :, f_mask]) 

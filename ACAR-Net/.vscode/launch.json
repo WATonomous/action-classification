@@ -11,7 +11,10 @@
             "program": "main.py",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["--config", "configs/ROAD/config.yaml", "--nproc_per_node", "1"]
+            "args": ["--config", "configs/ROAD/config.yaml", "--nproc_per_node", "1"],
+            "env": {
+                "WANDB_MODE": "online"
+            }
         },
         {
             "name": "Probe",
