@@ -375,6 +375,7 @@ def train_epoch(epoch, data_loader, model, criterion, optimizer, scheduler,
         scheduler.step(curr_step)
 
         # FORWARD PASS !!!!
+        # with torch.autograd.detect_anomaly():
         ret = model(data)
 
         num_rois = ret['num_rois']
@@ -400,7 +401,9 @@ def train_epoch(epoch, data_loader, model, criterion, optimizer, scheduler,
                     loss = loss + param.sum()
             loss = 0. * loss
 
+        # with torch.autograd.detect_anomaly():
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=5)
         optimizer.step()
 
         reduced_loss = loss.clone()

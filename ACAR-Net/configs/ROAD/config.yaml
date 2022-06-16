@@ -2,11 +2,11 @@ evaluate: False
 result_path: ./output/text # same for any experiment in dvc world
 tensorboard_path: ./output/tensorboard
 model_path: ./output/saved_models # where the model is saved
-resume_path: # ckpt_1.pth.tar
+resume_path: ckpt_4.pth.tar
 manual_seed: 1
 print_freq: 20
 dataset: "road_tube"
-experiment_name: "road_accepting_tubes_debug_run"
+experiment_name: "tubes_full_run_stride_1_cont"
 # node * processes per node = # of cores that will be allocated
 # we have one node, but can have multiple processes per node to take advantage of
 # multiple GPU training (1 GPU per process). Resource: https://yangkky.github.io/2019/07/08/distributed-pytorch-tutorial.html 

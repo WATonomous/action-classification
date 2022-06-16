@@ -423,7 +423,7 @@ class ROADTube(data.Dataset):
         self.data_stride = [] # stores the stride'th frame
         self.fps = 12
         self.num_frames_in_clip = 91
-        self.stride = 4 # distributed sampling, > stride means more unique data but less data points
+        self.stride = 1 # distributed sampling, > stride means more unique data but less data points
         self.counter = 0
 
         with open(annotation_path, "r") as f:
