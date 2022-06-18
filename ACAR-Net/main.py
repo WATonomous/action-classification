@@ -140,6 +140,7 @@ def main(local_rank, args):
                 opt.train.root_path,
                 opt.train.annotation_path, 
                 opt.train.class_idx_path,
+                opt.train.stride,
                 "train_1",
                 spatial_transform,
                 temporal_transform,
@@ -235,9 +236,10 @@ def main(local_rank, args):
         )
     elif opt.get('dataset', "ava") == "road_tube":
         val_data = ava.ROADTubemulticrop(
-            opt.train.root_path,
-            opt.train.annotation_path, 
-            opt.train.class_idx_path,
+            opt.val.root_path,
+            opt.val.annotation_path, 
+            opt.val.class_idx_path,
+            opt.val.stride,
             "val_1",
             spatial_transform,
             temporal_transform,
@@ -498,7 +500,7 @@ def val_epoch(epoch, data_loader, model, criterion, act_func,
         data_time.update(time.time() - end_time)
 
         with torch.no_grad():
-            ret = model(data, evaluate=True) # <----------------------------------------- INTO THE MODEL WE GO! Once we get to this step, neck is next
+            ret = model(data, evaluate=True) 
             num_rois = ret['num_rois']
             outputs = ret['outputs']
             targets = ret['targets']

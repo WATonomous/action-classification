@@ -119,7 +119,9 @@ class TemporalCenterRetentionCrop(object):
                     end=end_index
                     ))
 
+        # crops frames in steps right of the center_index, starting at the center_index
         out_right = frame_indices[center_index : end_index + 1 : self.step][1:]
+        # crops frames in steps left of the center_index, starting at the center_index
         out_left = frame_indices[center_index : begin_index : -1][::self.step][::-1]
 
         return out_left + out_right
