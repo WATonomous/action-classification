@@ -1,8 +1,8 @@
-evaluate: False
+evaluate: True
 result_path: ./output/text # same for any experiment in dvc world
 tensorboard_path: ./output/tensorboard
-model_path: ./output/saved_models # where the model is saved
-# resume_path: ckpt_4.pth.tar
+model_path: ./pretrained/saved_models/stride_8_diff_steplr # where the model is saved
+resume_path: ckpt_4.pth.tar
 manual_seed: 1
 print_freq: 20
 dataset: "road_tube"
