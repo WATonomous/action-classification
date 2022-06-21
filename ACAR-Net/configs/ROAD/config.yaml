@@ -1,4 +1,4 @@
-evaluate: False
+evaluate: True
 result_path: ./output/text # same for any experiment in dvc world
 tensorboard_path: ./output/tensorboard
 model_path: ./output/saved_models # where the model is saved
@@ -102,7 +102,8 @@ train:
 
 val:
     root_path: /road/rgb-images
-    annotation_path: /road/road_trainval_v1.0.json
+    # annotation_path: /road/road_trainval_v1.0.json
+    annotation_path: /road/detections/val1_coco.jsonl
     # detection annotation path: /road/detections/val1_coco.jsonl
     class_idx_path: /road/class_name_gen_1.json
     # Maxes all ram and about half of GPUs on thor
@@ -110,6 +111,8 @@ val:
     # workers: 20
     batch_size: 8
     workers: 8
+    det_annotation: True
+    det_threshold: 0.3
     
     augmentation:
         spatial:
