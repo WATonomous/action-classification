@@ -62,6 +62,7 @@ train:
     batch_size: 8
     workers: 8
         
+    max_norm: 10 # maximum gradient value to prevent gradient explosion
     augmentation:
         spatial:
           - type: Scale

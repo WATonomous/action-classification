@@ -273,14 +273,6 @@ def main(local_rank, args):
             if rank == 0:
                 logger.info('Also loaded optimizer and scheduler from checkpoint {}'.format(opt.resume_path))
 
-    if opt.loss.type == "FocalLoss":
-        # This is a class instantiation, LOL
-        # this is necessary because we want to compute the inverse class
-        # frequency weighting as a parameter to the loss function
-        focal_loss = FocalLoss(train_data.action_counts)
-        criterion = focal_loss.compute_focal_loss
-        # if we ever use this in evaluation, just use the sigmoid function as activation
-        act_func = torch.sigmoid
     elif opt.loss.type == "wBCE":
         criterion = wBCE(train_data.action_counts, train_data.total_boxes)
         act_func = torch.sigmoid
@@ -381,7 +373,7 @@ def train_epoch(epoch, data_loader, model, criterion, act_func, optimizer, sched
             loss = 0. * loss
 
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=10)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=opt.train.max_norm)
         optimizer.step()
 
         reduced_loss = loss.clone()
