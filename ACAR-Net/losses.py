@@ -46,14 +46,14 @@ def max_reduction_sigmoid_focal_criterion(logits, targets):
     loss = sigmoid_focal_loss(logits,targets, reduction = "none").max(dim =1).values
     return torch.mean(loss, dim = 0)
 
-def max_reduction_sigmoid_focal(_ = False):
+def max_reduction_sigmoid_focal():
     return max_reduction_sigmoid_focal_criterion, torch.sigmoid
 
 def sum_reduction_sigmoid_focal_criterion(logits, targets):
     loss = sigmoid_focal_loss(logits,targets, reduction = "none").sum(dim =1)
     return torch.mean(loss, dim = 0)
 
-def sum_reduction_sigmoid_focal(_ = False):
+def sum_reduction_sigmoid_focal():
     return sum_reduction_sigmoid_focal_criterion, torch.sigmoid
 
 
@@ -65,7 +65,7 @@ def custom_sigmoid_focal_criterion(logits, targets):
     return loss
 
 
-def custom_sigmoid_focal(_ = False):
+def custom_sigmoid_focal():
     return custom_sigmoid_focal_criterion, torch.sigmoid
 
 
@@ -73,7 +73,7 @@ def bce_sigmoid_criterion(logits, targets):
     logits = torch.sigmoid(logits)
     return F.binary_cross_entropy(logits, targets)
 
-def bce_sigmoid(_ = False):
+def bce_sigmoid():
     return bce_sigmoid_criterion, torch.sigmoid
 
 def softmax_func(logits):
@@ -86,7 +86,7 @@ def bce_softmax_criterion(logits, targets):
     targets = torch.nan_to_num(targets)
     return F.cross_entropy(logits, targets)
 
-def bce_softmax(_ = False):
+def bce_softmax():
     return bce_softmax_criterion, softmax_func
 
 def ava_pose_softmax_func(logits):

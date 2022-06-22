@@ -273,11 +273,14 @@ def main(local_rank, args):
             if rank == 0:
                 logger.info('Also loaded optimizer and scheduler from checkpoint {}'.format(opt.resume_path))
 
-    elif opt.loss.type == "wBCE":
+    if opt.loss.type == "wBCE":
         criterion = wBCE(train_data.action_counts, train_data.total_boxes)
         act_func = torch.sigmoid
-    else:
+    elif opt.loss.type.startswith("ava"):
         criterion, act_func = getattr(losses, opt.loss.type)(**opt.loss.get('kwargs', {}))
+    else:
+        # non-ava loss criterion don't require arguments.
+        criterion, act_func = getattr(losses, opt.loss.type)()
 
                         ###################################
                             # TRAINING AND VALIDATION
