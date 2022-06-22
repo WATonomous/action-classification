@@ -236,6 +236,7 @@ class ROAD(data.Dataset):
         self.data = []
         self.fps = 12
         self.action_counts = {}
+        self.total_boxes = 0
         self.num_frames_in_clip = 91
 
         with open(annotation_path, "r") as f:
@@ -268,6 +269,7 @@ class ROAD(data.Dataset):
                         dp['labels'] = []
                         assert len(frame['annos']) > 0, frame['annotated']
                         for annon in frame['annos'].values():
+                            self.total_boxes += 1
                             label = {'bounding_box': annon['box'], 'label': annon['action_ids']}
                             for action_id in annon['action_ids']:
                                 self.action_counts[action_id] = self.action_counts.get(action_id, 0) + 1

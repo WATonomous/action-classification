@@ -2,15 +2,15 @@ evaluate: False
 result_path: ./output/text # same for any experiment in dvc world
 tensorboard_path: ./output/tensorboard
 model_path: ./output/saved_models # where the model is saved
-resume_path: ckpt_6_base.pth.tar
+resume_path:
 manual_seed: 1
 print_freq: 20
 dataset: "road"
-experiment_name: "focal_loss_from_ckpt_6_inverse_freq"
+experiment_name: "weighted_bce_argus"
 # node * processes per node = # of cores that will be allocated
 # we have one node, but can have multiple processes per node to take advantage of
 # multiple GPU training (1 GPU per process). Resource: https://yangkky.github.io/2019/07/08/distributed-pytorch-tutorial.html 
-nproc_per_node: 1
+nproc_per_node: 2
 
 class_list: ["Red", "Amber", "Green",
 "MovAway", "MovTow",
@@ -51,9 +51,9 @@ model:
             depth: 2
 
 loss:
-    type: FocalLoss
+    type: wBCE
     kwargs:
-        pose_softmax: 
+        pose_softmax: True
 
 train:
     root_path: /road/rgb-images

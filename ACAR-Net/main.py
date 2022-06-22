@@ -38,9 +38,16 @@ def log_artifacts():
     wandb.finish()
 
 
+class MyError(Exception): 
+    pass
+
+
 def handler(signum, frame):
     print("Trying to log artifacts.... (Ctrl-C to stop)")
     log_artifacts()
+    raise MyError('Received signal ' + str(signum) +
+                  ' on line ' + str(frame.f_lineno) +
+                  ' in ' + frame.f_code.co_filename)    
 
 def main(local_rank, args):
     """
@@ -73,8 +80,8 @@ def main(local_rank, args):
         if not opt.experiment_name:
             raise ValueError("No experiment name specified in run config.")
         else:
-            wandb.init(project='acar', name = opt.experiment_name, sync_tensorboard=True)
-        signal.signal(signal.SIGINT, handler)
+            # resume does not take care of loading ckpts, you must do that yourself in the config for now.
+            wandb.init(project='acar', name = opt.experiment_name, sync_tensorboard=True, resume = args.resume)
         mkdir(opt.result_path)
         mkdir(os.path.join(opt.result_path, 'tmp'))
         with open(os.path.join(opt.result_path, f'opts.json'), 'w') as opt_file:
@@ -266,15 +273,19 @@ def main(local_rank, args):
             if rank == 0:
                 logger.info('Also loaded optimizer and scheduler from checkpoint {}'.format(opt.resume_path))
 
-    if opt.loss.type.startswith('ava'):
-        criterion, act_func = getattr(losses, opt.loss.type)(**opt.loss.get('kwargs', {}))
-    else:
+    if opt.loss.type == "FocalLoss":
         # This is a class instantiation, LOL
         # this is necessary because we want to compute the inverse class
         # frequency weighting as a parameter to the loss function
         focal_loss = FocalLoss(train_data.action_counts)
         criterion = focal_loss.compute_focal_loss
-        act_func = ava_pose_softmax_func
+        # if we ever use this in evaluation, just use the sigmoid function as activation
+        act_func = torch.sigmoid
+    elif opt.loss.type == "wBCE":
+        criterion = wBCE(train_data.action_counts, train_data.total_boxes)
+        act_func = torch.sigmoid
+    else:
+        criterion, act_func = getattr(losses, opt.loss.type)(**opt.loss.get('kwargs', {}))
 
                         ###################################
                             # TRAINING AND VALIDATION
@@ -286,7 +297,7 @@ def main(local_rank, args):
     else:  # training and validation mode
         for e in range(begin_epoch, opt.train.n_epochs + 1):
             train_sampler.set_epoch(e)
-            train_epoch(e, train_loader, net, criterion, optimizer, scheduler,
+            train_epoch(e, train_loader, net, criterion, act_func, optimizer, scheduler,
                         opt, logger, train_logger, train_batch_logger, rank, world_size, writer)
             
             if e % opt.train.val_freq == 0:
@@ -298,7 +309,7 @@ def main(local_rank, args):
         writer.close()
     
     
-def train_epoch(epoch, data_loader, model, criterion, optimizer, scheduler, 
+def train_epoch(epoch, data_loader, model, criterion, act_func, optimizer, scheduler, 
                 opt, logger, epoch_logger, batch_logger, rank, world_size, writer):
     if rank == 0:
         logger.info('Training at epoch {}'.format(epoch))
@@ -359,7 +370,7 @@ def train_epoch(epoch, data_loader, model, criterion, optimizer, scheduler,
         if num_rois > 0:
             loss = criterion(outputs, targets)
             loss = loss * num_rois / tot_rois * world_size
-            batch_pred_prob = ava_pose_softmax_func(outputs)
+            batch_pred_prob = act_func(outputs)
             train_epoch_pred_prob = torch.cat( (train_epoch_pred_prob, batch_pred_prob.detach().cpu()), axis=0 )
             train_epoch_targets = torch.cat( (train_epoch_targets, targets.detach().cpu()), axis=0 )
         else:
@@ -370,6 +381,7 @@ def train_epoch(epoch, data_loader, model, criterion, optimizer, scheduler,
             loss = 0. * loss
 
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=10)
         optimizer.step()
 
         reduced_loss = loss.clone()
@@ -396,7 +408,7 @@ def train_epoch(epoch, data_loader, model, criterion, optimizer, scheduler,
                         'Iter [{1}/{2}]\t'
                         'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                         'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
-                        'Loss {loss.val:.4f} ({loss.avg:.4f})'.format(
+                        'Loss {loss.val:.6f} ({loss.avg:.6f})'.format(
                             epoch,
                             i + 1,
                             len(data_loader),
@@ -437,7 +449,7 @@ def train_epoch(epoch, data_loader, model, criterion, optimizer, scheduler,
         
         logger.info('-' * 100)
         
-    tensorboard_funcs.add_model_weights_as_histogram(model, writer, epoch)            
+        tensorboard_funcs.add_model_weights_as_histogram(model, writer, epoch)            
 
 def val_epoch(epoch, data_loader, model, criterion, act_func,
               opt, logger, epoch_logger, rank, world_size, writer):
@@ -473,7 +485,7 @@ def val_epoch(epoch, data_loader, model, criterion, act_func,
             end_time = time.time()
             continue
         
-        batch_pred_prob = ava_pose_softmax_func(outputs)
+        batch_pred_prob = act_func(outputs)
         val_epoch_pred_prob = torch.cat( (val_epoch_pred_prob, batch_pred_prob.detach().cpu()), axis=0 )
         val_epoch_targets = torch.cat( (val_epoch_targets, targets.detach().cpu()), axis=0 )
 
@@ -571,6 +583,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='PyTorch AVA Training and Evaluation')
     parser.add_argument('--config', type=str, required=True)
+    parser.add_argument('--resume', action='store_true')
     parser.add_argument('--nproc_per_node', type=int, default=8)
     parser.add_argument('--backend', type=str, default='nccl')
     parser.add_argument('--master_addr', type=str, default=socket.gethostbyname(socket.gethostname()))
@@ -583,7 +596,6 @@ if __name__ == '__main__':
         config = yaml.load(f, Loader=yaml.FullLoader)
     opt = EasyDict(config)
     args.nproc_per_node = opt.nproc_per_node # hack to make the rest of the code work
-
     # if we're debugging, don't log anything
 
     ####################################################
