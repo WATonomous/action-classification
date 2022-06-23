@@ -1,9 +1,7 @@
-from distutils.log import ERROR
 from PIL import Image
 import os
 import pickle
 import json
-from cv2 import sepFilter2D
 import numpy as np
 import io
 from iopath.common.file_io import g_pathmgr
@@ -158,9 +156,7 @@ class AVADataLoader(data.DataLoader):
             datum['aug_info']['pad_ratio'] = pad_ratio
             aug_info.append(datum['aug_info'])
         filenames = [_['video_name'] for _ in batch]
-        labels = [_['label'] for _ in batch] # <----------------------- where labels are loaded... batch? oh yeah its list comprehension, but double check what batch is
-        ''' you can move onto the main.py after this
-        '''
+        labels = [_['label'] for _ in batch] 
         mid_times = [_['mid_time'] for _ in batch]
         
         output = {
@@ -288,12 +284,7 @@ class ROAD(data.Dataset):
         with open(annotation_path, "r") as f:
             if split == "train_1":
                 fs = f.read()
-                ''' The entrypoint of the bounding box data, bboxes are in the json file.
-                    TODO: START HERE, look at json file, so how we can parse it differently to get boxes for each frame of video
-                    debug annon, see what it consists of 
-                    move on to line 159 of this file
-                '''
-                ann_dict = json.loads(fs) # this is where the annotations are <------------------------ maybe these have some more bboxes?
+                ann_dict = json.loads(fs) 
                 for video in ann_dict['db'].keys():
                     if split not in ann_dict['db'][video]['split_ids']:
                         continue
@@ -318,8 +309,8 @@ class ROAD(data.Dataset):
                         dp['labels'] = []
                         assert len(frame['annos']) > 0, frame['annotated']
                         for annon in frame['annos'].values():
-                            label = {'bounding_box': annon['box'], 'label': annon['action_ids']} # this needs to be a list of bboxes <--------- what is action_ids?
-                            dp['labels'].append(label) # label is created here <-------------------------------------
+                            label = {'bounding_box': annon['box'], 'label': annon['action_ids']} 
+                            dp['labels'].append(label) 
                         self.data.append(dp)
             elif split == "val_1":
                 fs = f.read()
@@ -345,7 +336,7 @@ class ROAD(data.Dataset):
                             dp['n_frames'] = ann_dict['db'][video]['numf'] - dp['start_frame'] + 1
                         dp['format_str'] = '%05d.jpg'
                         dp['frame_rate'] = self.fps
-                        dp['labels'] = [] # <----------------------------- labels also created here (should be similar to above)
+                        dp['labels'] = [] 
                         assert len(frame['annos']) > 0, frame['annotated']
                         for annon in frame['annos'].values():
                             label = {'bounding_box': annon['box'], 'label': annon['action_ids']}
@@ -380,7 +371,7 @@ class ROAD(data.Dataset):
         clip = torch.stack(clip, 0).permute(1, 0, 2, 3)
         return clip, aug_info
 
-    def __getitem__(self, index): # this might be more important actually 
+    def __getitem__(self, index): 
         path = os.path.join(self.root_path, self.data[index]['video'])
         frame_format = self.data[index]['format_str']
         start_frame = self.data[index]['start_frame']
@@ -424,17 +415,12 @@ class ROADTube(data.Dataset):
         self.data_stride = [] # stores the stride'th frame
         self.fps = 12
         self.num_frames_in_clip = 91
-        self.stride = stride # distributed sampling, > stride means more unique data but less data points
+        self.stride = stride # distributed sampling, > stride means more uniqueness in data but less data points
         self.counter = 0
 
         with open(annotation_path, "r") as f:
             if split == "train_1":
                 fs = f.read()
-                ''' The entrypoint of the bounding box data, bboxes are in the json file.
-                    TODO: START HERE, look at json file, so how we can parse it differently to get boxes for each frame of video
-                    debug annon, see what it consists of 
-                    move on to line 159 of this file
-                '''
                 ann_dict = json.loads(fs) 
                 for video in ann_dict['db'].keys():
                     if split not in ann_dict['db'][video]['split_ids']:
@@ -517,7 +503,7 @@ class ROADTube(data.Dataset):
         clip = torch.stack(clip, 0).permute(1, 0, 2, 3)
         return clip, aug_info
 
-    def __getitem__(self, index): # this might be more important actually 
+    def __getitem__(self, index): 
         path = os.path.join(self.root_path, self.data_stride[index]['video'])
         frame_format = self.data_stride[index]['format_str']
         center_frame = self.data_stride[index]['center_frame']

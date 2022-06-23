@@ -75,7 +75,6 @@ def main(local_rank, args):
         
         wandb.init(project='acar', name = opt.experiment_name, sync_tensorboard=True)
 
-        # to deal with other signals, especially during debug sessions and the presense of child processes
         signal.signal(signal.SIGINT, handler)
 
         mkdir(opt.result_path)
@@ -122,7 +121,6 @@ def main(local_rank, args):
 
         temporal_transform = getattr(temporal_transforms, train_aug.temporal.type)(**train_aug.temporal.get('kwargs', {}))
 
-        # DATASET IS INITIALIZED, SEE DATASETS/AVA.PY/ROAD CLASS
         if opt.get('dataset', "ava") == "road":
             # ava is the default dataset when dataset is unspecified 
             # augmented train data has size 76139, the most of which have 91 frames. 

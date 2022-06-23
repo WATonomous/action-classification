@@ -33,9 +33,6 @@ class BasicNeck(nn.Module):
             pad_ratio = aug_info['pad_ratio']
             sizes_before_padding.append([1. / pad_ratio[0], 1. / pad_ratio[1]])
             
-            # TODO add another loop here I think
-            ''' BASED ON WHAT YOU HAVE DONE TO THE DATA LOADER, MAKE THE NECESSARY CHANGES TO ITERATE THROUGH EACH FRAME
-            '''
             # labels in the key frame
             key_labels = data['batch_labels'][idx][(len(data['batch_labels'][idx]) // 2) - 1]
             for label in key_labels: # set key frame action labels and tube_uids
