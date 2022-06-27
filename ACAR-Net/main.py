@@ -80,7 +80,6 @@ def main(local_rank, args):
         if not opt.experiment_name:
             raise ValueError("No experiment name specified in run config.")
         else:
-            # resume does not take care of loading ckpts, you must do that yourself in the config for now.
             wandb.init(project='acar', name = opt.experiment_name, sync_tensorboard=True)
         mkdir(opt.result_path)
         mkdir(os.path.join(opt.result_path, 'tmp'))
