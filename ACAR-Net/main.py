@@ -81,7 +81,7 @@ def main(local_rank, args):
             raise ValueError("No experiment name specified in run config.")
         else:
             # resume does not take care of loading ckpts, you must do that yourself in the config for now.
-            wandb.init(project='acar', name = opt.experiment_name, sync_tensorboard=True, resume = args.resume)
+            wandb.init(project='acar', name = opt.experiment_name, sync_tensorboard=True)
         mkdir(opt.result_path)
         mkdir(os.path.join(opt.result_path, 'tmp'))
         with open(os.path.join(opt.result_path, f'opts.json'), 'w') as opt_file:
@@ -573,9 +573,10 @@ def val_epoch(epoch, data_loader, model, criterion, act_func,
 
 if __name__ == '__main__':
 
+    # TODO add functionality to resume from a specified checkpoint without having to edit the config
+
     parser = argparse.ArgumentParser(description='PyTorch AVA Training and Evaluation')
     parser.add_argument('--config', type=str, required=True)
-    parser.add_argument('--resume', action='store_true')
     parser.add_argument('--nproc_per_node', type=int, default=8)
     parser.add_argument('--backend', type=str, default='nccl')
     parser.add_argument('--master_addr', type=str, default=socket.gethostbyname(socket.gethostname()))

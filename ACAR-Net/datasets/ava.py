@@ -1,3 +1,4 @@
+from collections import defaultdict
 from PIL import Image
 import os
 import pickle
@@ -235,7 +236,7 @@ class ROAD(data.Dataset):
                  temporal_transform=None):
         self.data = []
         self.fps = 12
-        self.action_counts = {}
+        self.action_counts = defaultdict(int)
         self.total_boxes = 0
         self.num_frames_in_clip = 91
 
@@ -272,7 +273,7 @@ class ROAD(data.Dataset):
                             self.total_boxes += 1
                             label = {'bounding_box': annon['box'], 'label': annon['action_ids']}
                             for action_id in annon['action_ids']:
-                                self.action_counts[action_id] = self.action_counts.get(action_id, 0) + 1
+                                self.action_counts[action_id] += 1
                             dp['labels'].append(label)
                         self.data.append(dp)
                 print("Data Distribution by action class:")
@@ -305,7 +306,7 @@ class ROAD(data.Dataset):
                         for annon in frame['annos'].values():
                             label = {'bounding_box': annon['box'], 'label': annon['action_ids']}
                             for action_id in annon['action_ids']:
-                                self.action_counts[action_id] = self.action_counts.get(action_id, 0) + 1
+                                self.action_counts[action_id] += 1
                             dp['labels'].append(label)
                         self.data.append(dp)
         with open(class_idx_path, "r") as f:
