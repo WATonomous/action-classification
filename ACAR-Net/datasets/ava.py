@@ -411,33 +411,34 @@ class ROADTube(data.Dataset):
                  split,
                  spatial_transform=None,
                  temporal_transform=None):
+        ''' ROADTube Dataset class:
+            Splits the ROAD dataset into clips of video. Processes annotations and loads frame images
+            in a format that is compatible with the model. 
+            Args:
+                root_path: path to the folders rgb images (each folder being a different video in ROAD)
+                annotation_path: path to the annotations
+                class_idx_path: path to the class indexs
+                stride: distributed sampling, > stride means more uniqueness in data but less data points
+                split: splitting scheme of ROAD data
+                spatial_transform: what sort of spatial transformation should we do?
+                temporal_transform: what sort fo temporal transform should we do (ROADTube is only 
+                    compatible with CenterRetentionCrop)
+        '''
+
         self.data = [] # stores the other frames
         self.data_stride = [] # stores the stride'th frame
         self.fps = 12
         self.num_frames_in_clip = 91
-        self.stride = stride # distributed sampling, > stride means more uniqueness in data but less data points
-        self.counter = 0
+        self.stride = stride 
 
         with open(annotation_path, "r") as f:
-            if split == "train_1":
-                fs = f.read()
-                ann_dict = json.loads(fs) 
-                for video in ann_dict['db'].keys():
-                    if split not in ann_dict['db'][video]['split_ids']:
-                        continue
+            fs = f.read()
+            ann_dict = json.loads(fs) 
+            for video in ann_dict['db'].keys():
+                if split not in ann_dict['db'][video]['split_ids']:
+                    continue
 
-                    self.append_new_data(video, ann_dict)
-
-            elif split == "val_1":
-                fs = f.read()
-                ann_dict = json.loads(fs)
-                for video in ann_dict['db'].keys():
-                    self.counter += 1
-                    if split not in ann_dict['db'][video]['split_ids']:
-                        continue
-
-                    self.append_new_data(video, ann_dict)
-                        
+                self.append_new_data(video, ann_dict)            
 
         with open(class_idx_path, "r") as f:
             items = json.load(f).items()
@@ -448,14 +449,16 @@ class ROADTube(data.Dataset):
         self.spatial_transform = spatial_transform
         self.temporal_transform = temporal_transform
 
-    def append_new_data(self, video, ann_dict):
+    def append_new_data(self, video, ann_dict): 
+        ''' takes in the video name and annotation dictionary to create data points, 
+            appending them to self.data and self.data_stride
+        '''
         stride_counter = 0
         for frame in ann_dict['db'][video]['frames'].values():
             dp = {}
             frame_id = int(frame['rgb_image_id'])
             dp['video'] = video
             dp['time'] = frame_id
-            dp['midframe'] = frame_id
             dp['n_frames'] = self.num_frames_in_clip
 
             dp['format_str'] = '%05d.jpg'
@@ -483,13 +486,6 @@ class ROADTube(data.Dataset):
 
             self.data.append(dp)
 
-        return
-
-    def detection_bbox_to_ava(self, bbox):
-        x1, y1, x2, y2 = bbox
-        convbb = [x1/1280, y1/960, x2/1280, y2/960]
-        return convbb     
-
     def _spatial_transform(self, clip):
         if self.spatial_transform is not None:
             init_size = clip[0].size[:2]
@@ -504,6 +500,14 @@ class ROADTube(data.Dataset):
         return clip, aug_info
 
     def __getitem__(self, index): 
+        ''' Data returned during enumeration.
+            Returns:
+                clip: rgb_images of frames
+                aug_info: some sort of info about the augmentations done to the clips
+                clip_labels: labels in each of the frames that pertain to the tube_uid of the center_frame
+                video_name: name of the video
+                mid_time: frame_id of the key frame
+        '''
         path = os.path.join(self.root_path, self.data_stride[index]['video'])
         frame_format = self.data_stride[index]['format_str']
         center_frame = self.data_stride[index]['center_frame']
@@ -525,6 +529,7 @@ class ROADTube(data.Dataset):
         clip = []
         # load frames in a clip, consolidate agent tracks via tube_uid
         for i in range(len(frame_indices)):
+            # append the labels in a frame if that label part of an agent track in the key frame
             clip_labels.append([label for label in self.data[frame_indices[i]]['frame_labels'] 
                 if label['tube_uid'] in key_tube_uids])
 

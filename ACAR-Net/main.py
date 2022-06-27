@@ -66,14 +66,12 @@ def main(local_rank, args):
     # opt as in options are loaded from config files provided as argument.
     opt = EasyDict(config)
     opt.world_size = world_size
-
-    
     
     if rank == 0:
         if not opt.experiment_name:
             raise ValueError("No experiment name specified in run config.")
         
-        wandb.init(project='acar', name = opt.experiment_name, sync_tensorboard=True)
+        # wandb.init(project='acar', name = opt.experiment_name, sync_tensorboard=True)
 
         signal.signal(signal.SIGINT, handler)
 

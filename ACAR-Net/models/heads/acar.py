@@ -77,47 +77,56 @@ class ACARHead(nn.Module):
         else:
             self.dp = None
 
-    # data: features, rois, num_rois, roi_ids, sizes_before_padding
-    # returns: outputs
     def forward(self, data):
         ''' ACAR HEAD: takes in data from the backbone and neck, produces action predictions through HR2O
-            Coming in rois must be of shape [42, N_f(in this case =32), 5].
+            Coming in rois must be of shape [num_rois, n_fast_frames, 5].
             When no roi exists, this code expects an roi of [batch_num, 1, 1, 1, 1] or
             in other words, an invalid roi. This creates a tensor of zeros.
-            I'm not sure if this is the move, we'll see
-            efficiency is a problem here
+            
+            data:
+                features: slow and fast features, [0] is slow, [1] is fast
+                rois: all the rois we are concerned with 
+                    (each label has 32 bboxes corrosponding to each fast frame)
+                num_rois: total number of rois
+                roi_ids: where each batch of rois end in the list of rois
+                sizes_before_padding: image size before padding
+            returns:
+                outputs: class predictions
         '''
         if not isinstance(data['features'], list):
             feats = [data['features']]
         else:
             feats = data['features']
-
-        h, w = feats[0].shape[3:]
+        
+        B_s, C_s, N_s, H_s, W_s = feats[0].shape 
+        B_f, C_f, N_f, H_f, W_f = feats[1].shape
         roi_slow_feats = []
         roi_fast_feats = []
         roi_slow_feats_nonzero = []
         roi_fast_feats_nonzero = [] 
 
         # for each temporal fast encoding, roi align
-        alpha = int(feats[1].shape[2] / feats[0].shape[2])
-        for idx in range(feats[1].shape[2]):
+        alpha = int(N_f / N_s)
+        for idx in range(N_f):
 
             if (idx + 1) % alpha == 0: # for each temporal slow encoding
                 f_s = feats[0][:, :, int(idx / alpha)]
                 rois = data['rois'][:, idx].detach() # roi for every alpha frame
                 
                 roi_slow_feats_nonzero.append(~(rois[:, 1:]==1).all(1)) # mask for filtering invalid rois
-                roi_slow_feats.append(self.head_roi_align(rois.clone(), f_s, h, w))
+                roi_slow_feats.append(self.head_roi_align(rois.clone(), f_s, H_s, W_s))
 
             f_f = feats[1][:, :, idx]
             rois = data['rois'][:, idx].detach() # roi for every frame
 
             roi_fast_feats_nonzero.append(~(rois[:, 1:]==1).all(1)) # mask for filtering invalid rois
-            roi_fast_feats.append(self.head_roi_align(rois.clone(), f_f, h, w))
+            roi_fast_feats.append(self.head_roi_align(rois.clone(), f_f, H_s, W_s))
             
         # stack pooled fast and slow roi alignments
+        # these are of shape [num_rois, depth, n_slow_or_fast_frames, roi_spatial, roi_spatial]
         roi_slow_feats = torch.stack(roi_slow_feats, dim=2) 
         roi_fast_feats = torch.stack(roi_fast_feats, dim=2) 
+        # these are of shape [num_rois, n_slow_or_fast_frames]
         roi_slow_feats_nonzero = torch.stack(roi_slow_feats_nonzero, dim=1)
         roi_fast_feats_nonzero = torch.stack(roi_fast_feats_nonzero, dim=1)
 
@@ -140,7 +149,7 @@ class ACARHead(nn.Module):
 
         # temporal average pooling for later tiling
         # requires all features have the same spatial dimensions
-        feats = [nn.AdaptiveAvgPool3d((1, h, w))(f).view(-1, f.shape[1], h, w) for f in feats]
+        feats = [nn.AdaptiveAvgPool3d((1, H_s, W_s))(f).view(-1, f.shape[1], H_s, W_s) for f in feats]
         feats = torch.cat(feats, dim=1)
         feats = self.conv_reduce(feats)
         
@@ -153,7 +162,7 @@ class ACARHead(nn.Module):
             if n_rois == 0:
                 continue
             
-            eff_h, eff_w = math.ceil(h * sizes_before_padding[idx][1]), math.ceil(w * sizes_before_padding[idx][0])
+            eff_h, eff_w = math.ceil(H_s * sizes_before_padding[idx][1]), math.ceil(W_s * sizes_before_padding[idx][0])
             bg_feats = feats[idx][:, :eff_h, :eff_w]
             bg_feats = bg_feats.unsqueeze(0).repeat((n_rois, 1, 1, 1))
             actor_feats = roi_feats[roi_ids[idx]:roi_ids[idx+1]]

@@ -57,9 +57,10 @@ class BasicNeck(nn.Module):
             roi_ids.append(roi_id)
             
             # produce rois according to tube_uids in the key frame
+            # len(data['batch_labels'][idx]) is the number of labels in [idx] clip within the batch
             frame_rois = torch.ones(roi_ids[-1] - roi_ids[-2], len(data['batch_labels'][idx]), 5).cuda()
             frame_rois[:, :, 0] = idx
-            for frame_labels, frame_idx in zip(data['batch_labels'][idx], range(len(data['batch_labels'][idx]))):
+            for frame_idx, frame_labels in enumerate(data['batch_labels'][idx]):
                 for label in frame_labels:
                     # jitter is a robustness step, it produces a bbox which varies slightly in size and shape from the original
                     if self.training and self.bbox_jitter is not None:
