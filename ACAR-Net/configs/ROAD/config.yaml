@@ -51,7 +51,7 @@ model:
             depth: 2
 
 loss:
-    type: ava_criterion
+    type: sum_reduction_sigmoid_focal
     kwargs:
         pose_softmax: True
 
@@ -63,6 +63,8 @@ train:
     workers: 8
         
     max_norm: 10 # maximum gradient value to prevent gradient explosion
+    # 10 is a "reasonably" high value that is unlikely to affect the natural
+    # gradients calculated by our model configured to train properly.
     # https://pytorch.org/docs/stable/generated/torch.nn.utils.clip_grad_norm_.html
     augmentation:
         spatial:
