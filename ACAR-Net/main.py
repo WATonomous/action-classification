@@ -77,12 +77,11 @@ def main(local_rank, args):
     
     
     if rank == 0:
-
         if not opt.experiment_name:
             raise ValueError("No experiment name specified in run config.")
         else:
             # put all command line args and options into wandb.config
-            wandb_config = dict(command_line = vars(args),config_file = opt)
+            wandb_config = dict(command_line = vars(args), config_file = opt)
             wandb.init(project='acar', name = opt.experiment_name, config = wandb_config, sync_tensorboard=True)
         mkdir(opt.result_path)
         mkdir(os.path.join(opt.result_path, 'tmp'))
