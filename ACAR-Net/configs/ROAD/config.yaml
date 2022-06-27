@@ -51,7 +51,7 @@ model:
             depth: 2
 
 loss:
-    type: ava_criterion
+    type: sum_reduction_sigmoid_focal
     kwargs:
         pose_softmax: True
 
