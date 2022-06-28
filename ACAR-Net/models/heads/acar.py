@@ -108,16 +108,15 @@ class ACARHead(nn.Module):
         # for each temporal fast encoding, roi align
         alpha = int(N_f / N_s)
         for idx in range(N_f):
-
             if (idx + 1) % alpha == 0: # for each temporal slow encoding
                 f_s = feats[0][:, :, int(idx / alpha)]
-                rois = data['rois'][:, idx].detach() # roi for every alpha frame
+                rois = data['rois'][:, idx] # roi for every alpha frame
                 
                 roi_slow_feats_nonzero.append(~(rois[:, 1:]==1).all(1)) # mask for filtering invalid rois
                 roi_slow_feats.append(self.head_roi_align(rois.clone(), f_s, H_s, W_s))
 
             f_f = feats[1][:, :, idx]
-            rois = data['rois'][:, idx].detach() # roi for every frame
+            rois = data['rois'][:, idx] # roi for every frame
 
             roi_fast_feats_nonzero.append(~(rois[:, 1:]==1).all(1)) # mask for filtering invalid rois
             roi_fast_feats.append(self.head_roi_align(rois.clone(), f_f, H_s, W_s))
