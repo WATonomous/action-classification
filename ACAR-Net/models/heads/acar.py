@@ -132,9 +132,9 @@ class ACARHead(nn.Module):
 
         # filter out invalid rois and avg pool
         roi_slow_feats = [nn.AdaptiveAvgPool3d((1, self.roi_spatial, self.roi_spatial))(roi_slow_feats[idx, :, s_mask]) 
-            for s_mask, idx in zip(roi_slow_feats_nonzero, range(len(roi_slow_feats_nonzero)))]
+            for idx, s_mask in enumerate(roi_slow_feats_nonzero)]
         roi_fast_feats = [nn.AdaptiveAvgPool3d((1, self.roi_spatial, self.roi_spatial))(roi_fast_feats[idx, :, f_mask]) 
-            for f_mask, idx in zip(roi_fast_feats_nonzero, range(len(roi_fast_feats_nonzero)))]
+            for idx, f_mask in enumerate(roi_fast_feats_nonzero)]
 
         # stack pooled fast and slow roi alignments, squeeze frame dim
         roi_slow_feats = torch.stack(roi_slow_feats, dim=0).squeeze(dim=2)
