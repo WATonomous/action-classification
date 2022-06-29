@@ -232,9 +232,7 @@ class ROAD(data.Dataset):
                  class_idx_path,
                  split,
                  spatial_transform=None,
-                 temporal_transform=None,
-                 det_annotation=False,
-                 det_threshold=0):
+                 temporal_transform=None):
         self.data = []
         self.fps = 12
         self.num_frames_in_clip = 91
@@ -282,8 +280,6 @@ class ROAD(data.Dataset):
                         # Let's use this frame as a validation point
                         dp = {}
                         frame_id = int(frame['input_image_id'])
-                        if frame_id % 100 != 0:
-                            continue
                         dp['video'] = video
                         dp['time'] = frame_id
                         dp['midframe'] = frame_id
