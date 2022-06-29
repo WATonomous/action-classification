@@ -111,8 +111,12 @@ def read_json(json_file, class_whitelist=None, load_score=False):
     scores = defaultdict(list)
     ann_dict = json.load(json_file)
     for video in ann_dict['db'].keys():
+        # filter ground-truth of validation set only
+        if 'val_1' not in ann_dict['db'][video]['split_ids']:
+            continue
         for frame in ann_dict['db'][video]['frames'].values():
-            if not frame['annotated'] or len(frame['annos']) == 0:
+            # only load ground-truth of annotated frames
+            if not frame['annotated']:
                 continue
             image_key = make_image_key(video, frame['input_image_id'])
             for annon in frame['annos'].values():
@@ -183,8 +187,13 @@ def run_evaluation(labelmap, groundtruth, detections, exclusions, logger):
 
     start = time.time()
     for image_key in gt_boxes:
+        # pred_boxes do not include frames with no detections
+        # to handle frames with no detections, add empty detections to those frames
         if image_key not in pred_boxes.keys():
-            continue
+            pred_boxes[image_key] = np.empty(shape=[0, 4], dtype=float)
+            pred_labels[image_key] = np.array([], dtype=int)
+            pred_scores[image_key] =np.array([], dtype=float)
+
         pascal_evaluator.add_single_ground_truth_image_info(
             image_key, {
                 standard_fields.InputDataFields.groundtruth_boxes:
@@ -199,6 +208,7 @@ def run_evaluation(labelmap, groundtruth, detections, exclusions, logger):
     start = time.time()
     num_pred_ignored = 0
     for image_key in pred_boxes:
+        # ignore frames without ground-truth annotations
         if image_key not in gt_boxes.keys():
             logger.info(("Found excluded timestamp in detections: %s. "
                           "It will be ignored."), image_key)
