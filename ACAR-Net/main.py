@@ -130,8 +130,6 @@ def main(local_rank, args):
                 "train_1",
                 spatial_transform,
                 temporal_transform,
-                opt.val.det_annotation,
-                opt.val.det_threshold
             )
         else:
             train_data = ava.AVA(

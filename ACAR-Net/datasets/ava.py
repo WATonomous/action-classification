@@ -271,69 +271,34 @@ class ROAD(data.Dataset):
                             dp['labels'].append(label)
                         self.data.append(dp)
             elif split == "val_1":
-                # Evaluation on ground-truth bbox
-                if(not det_annotation):
-                    fs = f.read()
-                    ann_dict = json.loads(fs)
-                    for video in ann_dict['db'].keys():
-                        if split not in ann_dict['db'][video]['split_ids']:
-                            continue
-
-                        for frame in ann_dict['db'][video]['frames'].values():
-                            if not frame['annotated'] or len(frame['annos']) == 0:
-                                continue
-                            # Let's use this frame as a training point
-                            dp = {}
-                            frame_id = int(frame['input_image_id'])
-                            if split == "train_1" and frame_id % 1 != 0:
-                                continue
-                            dp['video'] = video
-                            dp['time'] = frame_id
-                            dp['midframe'] = frame_id
-                            dp['start_frame'] = max(0, frame_id - self.num_frames_in_clip // 2)
-                            dp['n_frames'] = self.num_frames_in_clip
-                            if dp['start_frame'] + dp['n_frames'] - 1 > ann_dict['db'][video]['numf']:
-                                dp['n_frames'] = ann_dict['db'][video]['numf'] - dp['start_frame'] + 1
-                            dp['format_str'] = '%05d.jpg'
-                            dp['frame_rate'] = self.fps
-                            dp['labels'] = []
-                            assert len(frame['annos']) > 0, frame['annotated']
-                            for annon in frame['annos'].values():
-                                label = {'bounding_box': annon['box'], 'label': annon['action_ids']}
-                                dp['labels'].append(label)
-                            self.data.append(dp)
-                # Evaluation on detection bbox
-                if (det_annotation):        
-                    json_list = list(f)
-                    # Assume that all of these keys are from the val_1 split
-                    for keyframe_str in json_list:
-                        keyframe_dict = json.loads(keyframe_str)
-                        video = keyframe_dict['frameName'].split(".")[0]
-                        frame_id = int(keyframe_dict['frameName'].split(".")[1])
-                        if frame_id % 1 != 0:
+                fs = f.read()
+                ann_dict = json.loads(fs)
+                for video in ann_dict['db'].keys():
+                    if split not in ann_dict['db'][video]['split_ids']:
+                        continue
+                    for frame in ann_dict['db'][video]['frames'].values():
+                        if not frame['annotated'] or len(frame['annos']) == 0:
                             continue
                         # Let's use this frame as a validation point
                         dp = {}
+                        frame_id = int(frame['input_image_id'])
+                        if frame_id % 100 != 0:
+                            continue
                         dp['video'] = video
                         dp['time'] = frame_id
                         dp['midframe'] = frame_id
-                        dp['start_frame'] = frame_id - self.num_frames_in_clip // 2
-                        if dp['start_frame'] < 0:
-                            continue
+                        dp['start_frame'] = max(0, frame_id - self.num_frames_in_clip // 2)
                         dp['n_frames'] = self.num_frames_in_clip
-                        if dp['start_frame'] + dp['n_frames'] > 6000:
-                            continue
+                        if dp['start_frame'] + dp['n_frames'] - 1 > ann_dict['db'][video]['numf']:
+                            dp['n_frames'] = ann_dict['db'][video]['numf'] - dp['start_frame'] + 1
                         dp['format_str'] = '%05d.jpg'
                         dp['frame_rate'] = self.fps
                         dp['labels'] = []
-                        labels = keyframe_dict["detections"]
-                        assert len(labels) > 0, "Datapoint key {} contains no annoations".format(vid_frame_key)
-                        for annon in labels:                            
-                            if annon['score'] < det_threshold:
-                                continue
-                            label = {'bounding_box': self.detection_bbox_to_ava(annon['bbox']), 'label': [1]}
+                        assert len(frame['annos']) > 0, frame['annotated']
+                        for annon in frame['annos'].values():
+                            label = {'bounding_box': annon['box'], 'label': annon['action_ids']}
                             dp['labels'].append(label)
-                        self.data.append(dp)          
+                        self.data.append(dp)
 
         with open(class_idx_path, "r") as f:
             items = json.load(f).items()
