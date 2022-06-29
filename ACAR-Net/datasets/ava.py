@@ -283,15 +283,12 @@ class ROAD(data.Dataset):
                 for video in ann_dict['db'].keys():
                     if split not in ann_dict['db'][video]['split_ids']:
                         continue
-
                     for frame in ann_dict['db'][video]['frames'].values():
                         if not frame['annotated'] or len(frame['annos']) == 0:
                             continue
-                        # Let's use this frame as a training point
+                        # Let's use this frame as a validation point
                         dp = {}
                         frame_id = int(frame['input_image_id'])
-                        if split == "train_1" and frame_id % 1 != 0:
-                            continue
                         dp['video'] = video
                         dp['time'] = frame_id
                         dp['midframe'] = frame_id
@@ -309,6 +306,7 @@ class ROAD(data.Dataset):
                                 self.action_counts[action_id] += 1
                             dp['labels'].append(label)
                         self.data.append(dp)
+
         with open(class_idx_path, "r") as f:
             items = json.load(f).items()
             self.idx_to_class = sorted(items, key=lambda x: x[1])
