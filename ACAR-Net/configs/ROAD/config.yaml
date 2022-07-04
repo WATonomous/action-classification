@@ -49,7 +49,7 @@ model:
             depth: 2
 
 loss:
-    type: ava_criterion
+    type: sum_reduction_sigmoid_focal
     kwargs:
         pose_softmax: True
 
@@ -61,6 +61,10 @@ train:
     batch_size: 8
     workers: 8
         
+    max_norm: 10 # maximum gradient value to prevent gradient explosion
+    # 10 is a "reasonably" high value that is unlikely to affect the natural
+    # gradients calculated by our model configured to train properly.
+    # https://pytorch.org/docs/stable/generated/torch.nn.utils.clip_grad_norm_.html
     augmentation:
         spatial:
           - type: Scale
@@ -102,7 +106,6 @@ train:
 val:
     root_path: /road/rgb-images
     annotation_path: /road/road_trainval_v1.0.json
-    # detection annotation path: /road/detections/val1_coco.jsonl
     class_idx_path: /road/class_name_gen_1.json
     # Maxes all ram and about half of GPUs on thor
     # batch_size: 24

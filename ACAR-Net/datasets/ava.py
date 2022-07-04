@@ -1,3 +1,4 @@
+from collections import defaultdict
 from PIL import Image
 import os
 import pickle
@@ -268,8 +269,8 @@ class AVA(data.Dataset):
     def __len__(self):
         return len(self.data)
 
-
 class ROAD(data.Dataset):
+
     def __init__(self,
                  root_path,
                  annotation_path,
@@ -279,12 +280,16 @@ class ROAD(data.Dataset):
                  temporal_transform=None):
         self.data = []
         self.fps = 12
+        self.action_counts = defaultdict(int)
+        self.total_boxes = 0
         self.num_frames_in_clip = 91
 
         with open(annotation_path, "r") as f:
+            
+            fs = f.read()
+            ann_dict = json.loads(fs)
+
             if split == "train_1":
-                fs = f.read()
-                ann_dict = json.loads(fs) 
                 for video in ann_dict['db'].keys():
                     if split not in ann_dict['db'][video]['split_ids']:
                         continue
@@ -309,24 +314,25 @@ class ROAD(data.Dataset):
                         dp['labels'] = []
                         assert len(frame['annos']) > 0, frame['annotated']
                         for annon in frame['annos'].values():
-                            label = {'bounding_box': annon['box'], 'label': annon['action_ids']} 
-                            dp['labels'].append(label) 
+                            self.total_boxes += 1
+                            label = {'bounding_box': annon['box'], 'label': annon['action_ids']}
+                            for action_id in annon['action_ids']:
+                                self.action_counts[action_id] += 1
+                            dp['labels'].append(label)
                         self.data.append(dp)
+                print("Data Distribution by action class:")
+                for k, v in self.action_counts.items():
+                    print(ann_dict['all_action_labels'][k], v)
             elif split == "val_1":
-                fs = f.read()
-                ann_dict = json.loads(fs)
                 for video in ann_dict['db'].keys():
                     if split not in ann_dict['db'][video]['split_ids']:
                         continue
-
                     for frame in ann_dict['db'][video]['frames'].values():
                         if not frame['annotated'] or len(frame['annos']) == 0:
                             continue
-                        # Let's use this frame as a training point
+                        # Let's use this frame as a validation point
                         dp = {}
                         frame_id = int(frame['input_image_id'])
-                        if frame_id % 1 != 0:
-                            continue
                         dp['video'] = video
                         dp['time'] = frame_id
                         dp['midframe'] = frame_id
@@ -340,9 +346,10 @@ class ROAD(data.Dataset):
                         assert len(frame['annos']) > 0, frame['annotated']
                         for annon in frame['annos'].values():
                             label = {'bounding_box': annon['box'], 'label': annon['action_ids']}
+                            for action_id in annon['action_ids']:
+                                self.action_counts[action_id] += 1
                             dp['labels'].append(label)
                         self.data.append(dp)
-                        
 
         with open(class_idx_path, "r") as f:
             items = json.load(f).items()
