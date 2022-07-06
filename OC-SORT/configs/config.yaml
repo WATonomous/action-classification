@@ -1,0 +1,22 @@
+# do you want to compare generated tubes to the tubes labeled by ROAD?
+evaluation: False 
+
+# path to the annotation file
+annotation_path: /road/road_trainval_v1.0.json
+# this determines whether we are dealing with ground truth labels 
+# or multiple overlapping detections of varying confidence
+ground_truth: False
+# do you want to save the tubes produced by the tracker?
+# generated tubes are saved in a separate annotation file in the same directory as the original
+save_tubes: False 
+
+
+ocsort:
+  det_tresh: 0.5
+  max_age: 30
+  min_hits: 3
+  iou_threshold: 0.3
+  delta_t: 3 
+  asso_func: "iou"
+  inertia: 0.2 
+  use_byte: False

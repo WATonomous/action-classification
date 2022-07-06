@@ -72,8 +72,8 @@ def main(local_rank, args):
     if rank == 0:
         if not opt.experiment_name:
             raise ValueError("No experiment name specified in run config.")
-        else:
-            wandb.init(project='acar', name = opt.experiment_name, sync_tensorboard=True)
+        # else:
+        #     wandb.init(project='acar', name = opt.experiment_name, sync_tensorboard=True)
         signal.signal(signal.SIGINT, handler)
         mkdir(opt.result_path)
         mkdir(os.path.join(opt.result_path, 'tmp'))
