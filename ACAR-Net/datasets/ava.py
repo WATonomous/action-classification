@@ -418,19 +418,27 @@ class ROADTube(data.Dataset):
                  split,
                  spatial_transform=None,
                  temporal_transform=None):
-        ''' ROADTube Dataset class:
-            Splits the ROAD dataset into clips of video. Processes annotations and loads frame images
-            in a format that is compatible with the model. 
-            Args:
-                root_path: path to the folders rgb images (each folder being a different video in ROAD)
-                annotation_path: path to the annotations
-                class_idx_path: path to the class indexs
-                stride: distributed sampling, > stride means more uniqueness in data but less data points
-                split: splitting scheme of ROAD data
-                spatial_transform: what sort of spatial transformation should we do?
-                temporal_transform: what sort fo temporal transform should we do (ROADTube is only 
-                    compatible with CenterRetentionCrop)
-        '''
+        """ROADTube Dataset class:
+        Splits the ROAD dataset into clips of video. Processes annotations and loads frame images
+        in a format that is compatible with the model.
+
+        Parameters
+        ----------
+        root_path : str
+            path to the folders of rgb images (each folder being a different video in ROAD)
+        annotation_path : str
+            path to the offical road dataset annotations
+        class_idx_path : str
+            path to a mapping from class names to indices
+        stride : int
+            downsampling, stride means more uniqueness in data but less data points
+        split : str
+            train_1', 'train_2', 'train_3', 'val_1', 'val_2', or 'val_3'
+        spatial_transform : spatial_transforms.Compose, optional
+            apply random transformations such as scaling, cropping, flipping, and jittering, by default None
+        temporal_transform : temporal_transforms.TemporalCenterRetentionCrop, optional
+            See TemporalCenterRetentionCrop, by default None
+        """
 
         self.data = [] # stores the other frames
         self.data_stride = [] # stores the stride'th frame
@@ -456,12 +464,20 @@ class ROADTube(data.Dataset):
         self.spatial_transform = spatial_transform
         self.temporal_transform = temporal_transform
 
-    def append_new_data(self, video, ann_dict): 
-        ''' takes in the video name and annotation dictionary to create data points, 
-            appending them to self.data and self.data_stride
-        '''
+    def append_new_data(self, video, ann_dict):
+        """Takes in the video name and annotation dictionary to create data points, 
+        appending them to self.data and self.data_stride
+
+        Parameters
+        ----------
+        video : str
+            name of video to add new data from.
+        ann_dict : dict
+            dictionary generated from loading the official ROAD dataset annotations.
+        """
         stride_counter = 0
         for frame in ann_dict['db'][video]['frames'].values():
+            # each dp is a datapoint, i.e. one training example
             dp = {}
             frame_id = int(frame['rgb_image_id'])
             dp['video'] = video
@@ -485,6 +501,8 @@ class ROADTube(data.Dataset):
                     stride_counter = 0
 
                     # if clip made from stride'th frame is incomplete, we do not consider it 
+                    # when a labeled frame exists near the beginning or end of the data,
+                    # the clip produced using that specific keyframe is incomplete
                     if frame_id + (self.num_frames_in_clip // 2) < ann_dict['db'][video]['numf'] \
                             and frame_id - (self.num_frames_in_clip // 2) >= 0:
 
@@ -494,6 +512,7 @@ class ROADTube(data.Dataset):
             self.data.append(dp)
 
     def _spatial_transform(self, clip):
+        # identical to the same function in the normal ROAD dataset
         if self.spatial_transform is not None:
             init_size = clip[0].size[:2]
 
@@ -506,15 +525,29 @@ class ROADTube(data.Dataset):
         clip = torch.stack(clip, 0).permute(1, 0, 2, 3)
         return clip, aug_info
 
-    def __getitem__(self, index): 
-        ''' Data returned during enumeration.
-            Returns:
-                clip: rgb_images of frames
-                aug_info: some sort of info about the augmentations done to the clips
-                clip_labels: labels in each of the frames that pertain to the tube_uid of the center_frame
-                video_name: name of the video
-                mid_time: frame_id of the key frame
-        '''
+    def __getitem__(self, index):
+        """Return data during training
+
+        Parameters
+        ----------
+        index : int
+            _description_
+
+        Returns
+        -------
+        dict
+            clip: rgb_images of frames
+            aug_info: some sort of info about the augmentations done to the clips
+            clip_labels: labels in each of the frames that pertain to the tube_uid of the center_frame
+            video_name: name of the video
+            mid_time: frame_id of the key frame
+
+        Raises
+        ------
+        RuntimeError
+            there may be be errors that occur when trying to load actual images into memory.
+        """
+
         path = os.path.join(self.root_path, self.data_stride[index]['video'])
         frame_format = self.data_stride[index]['format_str']
         center_frame = self.data_stride[index]['center_frame']
@@ -536,7 +569,7 @@ class ROADTube(data.Dataset):
         clip = []
         # load frames in a clip, consolidate agent tracks via tube_uid
         for i in range(len(frame_indices)):
-            # append the labels in a frame if that label part of an agent track in the key frame
+            # append the labels in a frame if that label is part of an agent track in the key frame
             clip_labels.append([label for label in self.data[frame_indices[i]]['frame_labels'] 
                 if label['tube_uid'] in key_tube_uids])
 
