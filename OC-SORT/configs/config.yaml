@@ -1,8 +1,10 @@
 # do you want to compare generated tubes to the tubes labeled by ROAD?
-evaluation: False 
+evaluate: False 
 
 # path to the annotation file
 annotation_path: /road/road_trainval_v1.0.json
+max_det: 255 # max number of detections in a frame
+
 # this determines whether we are dealing with ground truth labels 
 # or multiple overlapping detections of varying confidence
 ground_truth: False

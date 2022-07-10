@@ -7,6 +7,7 @@ from road_dataset import ROADOCSORT
 from trackers.ocsort_tracker.ocsort import OCSort
 from trackers.tracking_utils.evaluation import Evaluator
 
+LABEL_LENGTH = 6 # dp['frame_labels'] is [[x1, y1, x2, y2, score, agent], ...]
 
 def main(args):
     """ TUBE GENERATOR
@@ -24,7 +25,8 @@ def main(args):
         root_path=opt.root_path, 
         annotation_path=opt.annotation_path, 
         save_tubes=opt.save_tubes,
-        ground_truth=opt.ground_truth
+        ground_truth=opt.ground_truth,
+        evaluate=opt.evaluate
     )
 
     # enumerate through data, produce tubes
@@ -35,21 +37,28 @@ def main(args):
 
         # create separate trackers for each of the different agents, this is to avoid
         # ID switches across agents
-        agent_trackers = [OCSort() for _ in data['video_data']['agent_types']]
+        agent_trackers = [OCSort(opt.track_thresh, iou_threshold=opt.iou_thresh, delta_t=opt.deltat, 
+            asso_func=opt.asso, inertia=opt.inertia) for _ in data['video_data']['agent_types']]
 
         # run the trackers all at once on each of the frames (passing agents that they are concerned with)
+        online_targets = []
         for frame in data['video_data']['frames'].values():
-            # grab the boxes from the frame, 
-
-            pass
-        # grab tracks from all the trackers
-        # consolidate
+            # list of masks for each agent
+            frame_masks = [(frame[:, 4] == agent_id) for agent_id in data['video_data']['agent_types']]
+            # send each tracker their respective detections, consolidate tracks and their agent id
+            online_targets.append(np.append([np.append(agent_tracker.update(frame[frame_masks[i]]), i) 
+                    for i, agent_tracker in zip(data['video_data']['agent_types'], agent_trackers)]))
+        
+        # online_target: np.array([[x1, y1, x2, y2, tube_uid, agent_id], ...]) which are the tracked detections in a frame
+        # online_targets is num_frame # of online_target ^^
 
         # if save pass tracks back into dataloader to save into ann_dict
+        if opt.save_tubes:
+            dataloader[idx] = online_targets
 
         # if evaluate, evaluate on the ground truth tubes provided by ROAD
-
-        pass
+        if opt.evaluate:
+            pass
     
 
 if __name__ == '__main__':

@@ -199,7 +199,7 @@ class OCSort(object):
         NOTE: The number of objects returned may differ from the number of detections provided.
         """
         if output_results is None:
-            return np.empty((0, 5))
+            output_results = np.empty((0, 5))
 
         self.frame_count += 1
         # post_process detections
