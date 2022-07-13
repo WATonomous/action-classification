@@ -1,4 +1,4 @@
-evaluate: True
+evaluate: False
 result_path: ./output/text # same for any experiment in dvc world
 tensorboard_path: ./output/tensorboard
 model_path: ./output/saved_models # where the model is saved
@@ -33,7 +33,7 @@ model:
             fuse_kernel_size: 7
             slow_full_span: True
     neck:
-        type: basic
+        type: tube # [tube, basic], if this is tube, then head must be tube_acar
         kwargs:
             bbox_jitter:
                 num: 1
@@ -41,7 +41,7 @@ model:
             num_classes: 22
             multi_class: True
     head:
-        type: acar
+        type: tube_acar # [tube_acar, acar], if this is tube_acar, then neck must be tube
         kwargs:
             width: 2304
             roi_spatial: 7
@@ -84,7 +84,7 @@ train:
                 size: 64
                 step: 2
 
-    n_epochs: 7
+    n_epochs: 1
     val_freq: 1
     save_freq: 1
 

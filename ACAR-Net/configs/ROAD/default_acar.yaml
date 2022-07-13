@@ -6,7 +6,7 @@ model_path: ./output/saved_models # where the model is saved
 manual_seed: 1
 print_freq: 20
 dataset: "road" # ["road", "road_tubes"] if road_tubes, neck must be tube and head must be tube_acar
-experiment_name: tubes
+experiment_name: no_tubes
 # node * processes per node = # of cores that will be allocated
 # we have one node, but can have multiple processes per node to take advantage of
 # multiple GPU training (1 GPU per process). Resource: https://yangkky.github.io/2019/07/08/distributed-pytorch-tutorial.html 
@@ -127,7 +127,7 @@ val:
                 mean: [0.450, 0.450, 0.450]
                 std: [0.225, 0.225, 0.225]
         temporal:
-            type: TemporalCenterRetentionCrop
+            type: TemporalCenterCrop
             kwargs:
                 size: 64
                 step: 2
