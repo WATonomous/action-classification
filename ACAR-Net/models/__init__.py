@@ -20,7 +20,7 @@ class AVA_model(nn.Module):
             i_b = {'clips': data['clips']}
             o_b = self.backbone(i_b)
 
-            i_n = {'aug_info': data['aug_info'], 'batch_labels': data['batch_labels'], 
+            i_n = {'aug_info': data['aug_info'], 'labels': data['labels'], 
                    'filenames': data['filenames'], 'mid_times': data['mid_times']}
             o_n = self.neck(i_n)
 
@@ -41,8 +41,8 @@ class AVA_model(nn.Module):
         # eval mode
         assert not self.training
         
-        noaug_info = [{'crop_box': [0., 0., 1., 1.], 'flip': False, 'pad_ratio': [1., 1.]}] * len(data['batch_labels'])
-        i_n = {'aug_info': noaug_info, 'batch_labels': data['batch_labels'], 
+        noaug_info = [{'crop_box': [0., 0., 1., 1.], 'flip': False, 'pad_ratio': [1., 1.]}] * len(data['labels'])
+        i_n = {'aug_info': noaug_info, 'labels': data['labels'], 
                'filenames': data['filenames'], 'mid_times': data['mid_times']}
         o = self.neck(i_n)
         
@@ -53,7 +53,7 @@ class AVA_model(nn.Module):
             i_b = {'clips': data['clips'][no]}
             o_b = self.backbone(i_b)
             
-            i_n = {'aug_info': data['aug_info'][no], 'batch_labels': data['batch_labels'], 
+            i_n = {'aug_info': data['aug_info'][no], 'labels': data['labels'], 
                    'filenames': data['filenames'], 'mid_times': data['mid_times']}
             o_n = self.neck(i_n)
             

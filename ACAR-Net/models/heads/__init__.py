@@ -2,6 +2,7 @@ import torch.nn as nn
 
 from .linear import *
 from .acar import *
+from .tube_acar import *
 
 
 def model_entry(config):

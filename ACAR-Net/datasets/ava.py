@@ -128,6 +128,7 @@ def batch_pad(images, alignment=1, pad_value=0):
 class AVADataLoader(data.DataLoader):
     def __init__(self,
                  dataset,
+                 tube_labels,
                  batch_size=1,
                  shuffle=False,
                  sampler=None,
@@ -148,6 +149,7 @@ class AVADataLoader(data.DataLoader):
             drop_last=drop_last,
             **kwargs
         )
+        self.tube_labels = tube_labels
 
     def _collate_fn(self, batch):
         clips = [_['clip'] for _ in batch]
@@ -157,7 +159,12 @@ class AVADataLoader(data.DataLoader):
             datum['aug_info']['pad_ratio'] = pad_ratio
             aug_info.append(datum['aug_info'])
         filenames = [_['video_name'] for _ in batch]
-        labels = [_['label'] for _ in batch] 
+        if self.tube_labels:
+            # these are labels for each tube
+            labels = [_['clip_labels'] for _ in batch]
+        else:
+            # these are the labels only for each frame.
+            labels = [_['label'] for _ in batch] 
         mid_times = [_['mid_time'] for _ in batch]
         
         output = {
@@ -168,51 +175,6 @@ class AVADataLoader(data.DataLoader):
             'mid_times': mid_times
         }
         return output
-
-class ROADDataLoader(data.DataLoader):
-    def __init__(self,
-                 dataset,
-                 batch_size=1,
-                 shuffle=False,
-                 sampler=None,
-                 batch_sampler=None,
-                 num_workers=0,
-                 pin_memory=False,
-                 drop_last=False,
-                 **kwargs):
-        super(ROADDataLoader, self).__init__(
-            dataset=dataset, 
-            batch_size=batch_size, 
-            shuffle=shuffle, 
-            sampler=sampler, 
-            batch_sampler=batch_sampler, 
-            num_workers=num_workers,
-            collate_fn=self._collate_fn, 
-            pin_memory=pin_memory, 
-            drop_last=drop_last,
-            **kwargs
-        )
-
-    def _collate_fn(self, batch):
-        clips = [_['clip'] for _ in batch]
-        clips, pad_ratios = batch_pad(clips)
-        aug_info = []
-        for datum, pad_ratio in zip(batch, pad_ratios):
-            datum['aug_info']['pad_ratio'] = pad_ratio
-            aug_info.append(datum['aug_info'])
-        filenames = [_['video_name'] for _ in batch]
-        batch_labels = [_['clip_labels'] for _ in batch] 
-        mid_times = [_['mid_time'] for _ in batch]
-        
-        output = {
-            'clips': clips,
-            'aug_info': aug_info,
-            'filenames': filenames,
-            'batch_labels': batch_labels,
-            'mid_times': mid_times
-        }
-        return output
-
     
 class AVA(data.Dataset):
     def __init__(self,
@@ -602,7 +564,12 @@ class AVAmulticropDataLoader(AVADataLoader):
                 cur_aug_info.append(datum['aug_info'][i])
             aug_info.append(cur_aug_info)
         filenames = [_['video_name'] for _ in batch]
-        labels = [_['label'] for _ in batch]
+        if self.tube_labels:
+            # these are labels for each tube
+            labels = [_['clip_labels'] for _ in batch]
+        else:
+            # these are the labels only for each frame.
+            labels = [_['label'] for _ in batch] 
         mid_times = [_['mid_time'] for _ in batch]
         
         output = {
@@ -613,32 +580,7 @@ class AVAmulticropDataLoader(AVADataLoader):
             'mid_times': mid_times
         }
         return output
-
-
-class ROADmulticropDataLoader(ROADDataLoader):
-    def _collate_fn(self, batch):
-        clips, aug_info = [], []
-        for i in range(len(batch[0]['clip'])):
-            clip, pad_ratios = batch_pad([_['clip'][i] for _ in batch])
-            clips.append(clip)
-            cur_aug_info = []
-            for datum, pad_ratio in zip(batch, pad_ratios):
-                datum['aug_info'][i]['pad_ratio'] = pad_ratio
-                cur_aug_info.append(datum['aug_info'][i])
-            aug_info.append(cur_aug_info)
-        filenames = [_['video_name'] for _ in batch]
-        batch_labels = [_['clip_labels'] for _ in batch]
-        mid_times = [_['mid_time'] for _ in batch]
         
-        output = {
-            'clips': clips,
-            'aug_info': aug_info,
-            'filenames': filenames,
-            'batch_labels': batch_labels,
-            'mid_times': mid_times
-        }
-        return output
-    
     
 class AVAmulticrop(AVA):
     def _spatial_transform(self, clip):

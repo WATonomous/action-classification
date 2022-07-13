@@ -28,6 +28,8 @@ from utils import *
 import tensorboard_funcs
 import wandb
 
+from torch.profiler import profile, record_function, ProfilerActivity
+
 def log_artifacts():
     results = wandb.Artifact(name = "results", type= "results", description = "results and config files")
     ckpts = wandb.Artifact(name = "models", type = "models", description= "model checkpoints")
@@ -72,6 +74,7 @@ def main(local_rank, args):
 
     # opt as in options are loaded from config files provided as argument.
     opt = EasyDict(config)
+    opt.profile = args.profile
     opt.world_size = world_size
     
     if rank == 0:
@@ -160,27 +163,18 @@ def main(local_rank, args):
         # indices when its iterator is called.
         train_sampler = DistributedSampler(train_data, round_down=True)
 
-        if opt.get('dataset', "ava") == "road_tube":
-            train_loader = ava.ROADDataLoader(    
+
+        train_loader = ava.AVADataLoader(    
             train_data,
+            tube_labels = opt.get('dataset', "ava") == "road_tube",
             batch_size=opt.train.batch_size,
             shuffle=False,
             num_workers=opt.train.get('workers', 1),
             pin_memory=True,
             sampler=train_sampler,
             drop_last=True
-            )
-        else:
-            train_loader = ava.AVADataLoader(    
-                train_data,
-                batch_size=opt.train.batch_size,
-                shuffle=False,
-                num_workers=opt.train.get('workers', 1),
-                pin_memory=True,
-                sampler=train_sampler,
-                drop_last=True
-            )
-        
+        )
+                
         if rank == 0:
             logger.info('# train data: {}'.format(len(train_data)))
             logger.info('train spatial aug: {}'.format(spatial_transform))
@@ -258,18 +252,9 @@ def main(local_rank, args):
 
     val_sampler = DistributedSampler(val_data, round_down=False)
 
-    if opt.get('dataset', "ava") == "road_tube":   
-        val_loader = ava.ROADmulticropDataLoader(
-        val_data,
-        batch_size=opt.val.batch_size,
-        shuffle=False,
-        num_workers=opt.val.get('workers', 1),
-        pin_memory=True,
-        sampler=val_sampler
-        )
-    else:
-        val_loader = ava.AVAmulticropDataLoader(
+    val_loader = ava.AVAmulticropDataLoader(
             val_data,
+            tube_labels=opt.get('dataset', "ava") == "road_tube",
             batch_size=opt.val.batch_size,
             shuffle=False,
             num_workers=opt.val.get('workers', 1),
@@ -360,8 +345,11 @@ def train_epoch(epoch, data_loader, model, criterion, act_func, optimizer, sched
 
     end_time = time.time()
     for i, data in enumerate(data_loader):
+        if opt.profile and i > 0:
+            # when profiling code, its useful to stop after the first batch
+            # because we will get our profile faster and have a smaller file this way.
+            break
         # data should now contain the actual data.
-
         """
         data:
         - clips:
@@ -503,10 +491,15 @@ def val_epoch(epoch, data_loader, model, criterion, act_func,
 
     end_time = time.time()
     for i, data in enumerate(data_loader):
+        if opt.profile and i > 0:
+            # when profiling code, its useful to stop after the first batch
+            # because we will get our profile faster and have a smaller file this way.
+            break
+
         data_time.update(time.time() - end_time)
 
         with torch.no_grad():
-            ret = model(data, evaluate=True) 
+            ret = model(data, evaluate=True)
             num_rois = ret['num_rois']
             outputs = ret['outputs']
             targets = ret['targets']
@@ -607,6 +600,14 @@ def val_epoch(epoch, data_loader, model, criterion, act_func,
     dist.barrier()
 
 
+def profiler_wrapper(local_rank, args):
+    print("Starting process with profiler on")
+    with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
+        with record_function("main_function"):
+            main(local_rank, args)
+    print(f'writing profile to trace_{local_rank}.json')
+    prof.export_chrome_trace(f"trace_{local_rank}.json")
+
 if __name__ == '__main__':
 
     # TODO add functionality to resume from a specified checkpoint without having to edit the config
@@ -619,6 +620,7 @@ if __name__ == '__main__':
     parser.add_argument('--master_port', type=int, default=31114)
     parser.add_argument('--nnodes', type=int, default=None)
     parser.add_argument('--node_rank', type=int, default=None)
+    parser.add_argument('--profile', action='store_true')
     args = parser.parse_args()
 
     with open(args.config) as f:
@@ -629,4 +631,7 @@ if __name__ == '__main__':
     ####################################################
     # To turn off wandb, run: export WANDB_MODE=offline
     ####################################################
-    torch.multiprocessing.spawn(main, args=(args,), nprocs=args.nproc_per_node)
+    if args.profile:
+        torch.multiprocessing.spawn(profiler_wrapper, args=(args,), nprocs=args.nproc_per_node)
+    else:
+        torch.multiprocessing.spawn(main, args=(args,), nprocs=args.nproc_per_node)
