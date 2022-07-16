@@ -17,7 +17,7 @@ import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel
 
 from calc_mAP import run_evaluation
-from datasets import ava, spatial_transforms, temporal_transforms
+from datasets import ava, road, spatial_transforms, temporal_transforms
 from distributed_utils import init_distributed
 import losses
 from losses import *
@@ -133,7 +133,7 @@ def main(local_rank, args):
             # ava is the default dataset when dataset is unspecified 
             # augmented train data has size 76139, the most of which have 91 frames. 
             # important to note that the actual images are not read into memory here
-            train_data = ava.ROAD(
+            train_data = road.ROAD(
                 opt.train.root_path,
                 opt.train.annotation_path, 
                 opt.train.class_idx_path,
@@ -142,7 +142,7 @@ def main(local_rank, args):
                 temporal_transform,
             )
         elif opt.get('dataset', "ava") == "road_tube":
-            train_data = ava.ROADTube(
+            train_data = road.ROADTube(
                 opt.train.root_path,
                 opt.train.annotation_path, 
                 opt.train.class_idx_path,
@@ -163,17 +163,27 @@ def main(local_rank, args):
         # indices when its iterator is called.
         train_sampler = DistributedSampler(train_data, round_down=True)
 
-
-        train_loader = ava.AVADataLoader(    
-            train_data,
-            tube_labels = opt.get('dataset', "ava") == "road_tube",
-            batch_size=opt.train.batch_size,
-            shuffle=False,
-            num_workers=opt.train.get('workers', 1),
-            pin_memory=True,
-            sampler=train_sampler,
-            drop_last=True
-        )
+        if opt.get('dataset', "ava").startswith("road"):
+            train_loader = road.ROADDataLoader(    
+                train_data,
+                tube_labels = opt.get('dataseft', "ava") == "road_tube",
+                batch_size=opt.train.batch_size,
+                shuffle=False,
+                num_workers=opt.train.get('workers', 1),
+                pin_memory=True,
+                sampler=train_sampler,
+                drop_last=True
+            )
+        else:
+            train_loader = ava.AVADataLoader(    
+                train_data,
+                batch_size=opt.train.batch_size,
+                shuffle=False,
+                num_workers=opt.train.get('workers', 1),
+                pin_memory=True,
+                sampler=train_sampler,
+                drop_last=True
+            )
                 
         if rank == 0:
             logger.info('# train data: {}'.format(len(train_data)))
@@ -223,7 +233,7 @@ def main(local_rank, args):
     temporal_transform = getattr(temporal_transforms, val_aug.temporal.type)(**val_aug.temporal.get('kwargs', {}))
 
     if opt.get('dataset', "ava") == "road":                                                    
-        val_data = ava.ROADmulticrop(         
+        val_data = road.ROADmulticrop(         
             opt.val.root_path,
             opt.val.annotation_path,
             opt.val.class_idx_path,
@@ -232,7 +242,7 @@ def main(local_rank, args):
             temporal_transform,
         )
     elif opt.get('dataset', "ava") == "road_tube":
-        val_data = ava.ROADTubemulticrop(
+        val_data = road.ROADTubemulticrop(
             opt.val.root_path,
             opt.val.annotation_path, 
             opt.val.class_idx_path,
@@ -252,15 +262,25 @@ def main(local_rank, args):
 
     val_sampler = DistributedSampler(val_data, round_down=False)
 
-    val_loader = ava.AVAmulticropDataLoader(
-            val_data,
-            tube_labels=opt.get('dataset', "ava") == "road_tube",
-            batch_size=opt.val.batch_size,
-            shuffle=False,
-            num_workers=opt.val.get('workers', 1),
-            pin_memory=True,
-            sampler=val_sampler
-        )
+    if opt.get('dataset', "ava").startswith("road"):
+        val_loader = road.ROADmulticropDataLoader(
+                val_data,
+                tube_labels = opt.get('dataseft', "ava") == "road_tube",
+                batch_size=opt.val.batch_size,
+                shuffle=False,
+                num_workers=opt.val.get('workers', 1),
+                pin_memory=True,
+                sampler=val_sampler
+            )
+    else:
+        val_loader = ava.AVAmulticropDataLoader(
+                val_data,
+                batch_size=opt.val.batch_size,
+                shuffle=False,
+                num_workers=opt.val.get('workers', 1),
+                pin_memory=True,
+                sampler=val_sampler
+            )
     
     val_logger = None
     if rank == 0:
@@ -606,7 +626,7 @@ def profiler_wrapper(local_rank, args):
         with record_function("main_function"):
             main(local_rank, args)
     print(f'writing profile to trace_{local_rank}.json')
-    prof.export_chrome_trace(f"trace_{local_rank}.json")
+    prof.export_chrome_trace(os.path.join(args.prof_save_dir, f"trace_{local_rank}.json"))
 
 if __name__ == '__main__':
 
@@ -621,6 +641,7 @@ if __name__ == '__main__':
     parser.add_argument('--nnodes', type=int, default=None)
     parser.add_argument('--node_rank', type=int, default=None)
     parser.add_argument('--profile', action='store_true')
+    parser.add_argument('--prof_save_dir', type=str, default="./")
     args = parser.parse_args()
 
     with open(args.config) as f:
