@@ -166,7 +166,7 @@ def main(local_rank, args):
         if opt.get('dataset', "ava").startswith("road"):
             train_loader = road.ROADDataLoader(    
                 train_data,
-                tube_labels = opt.get('dataseft', "ava") == "road_tube",
+                tube_labels = opt.get('dataset', "ava") == "road_tube",
                 batch_size=opt.train.batch_size,
                 shuffle=False,
                 num_workers=opt.train.get('workers', 1),
@@ -265,7 +265,7 @@ def main(local_rank, args):
     if opt.get('dataset', "ava").startswith("road"):
         val_loader = road.ROADmulticropDataLoader(
                 val_data,
-                tube_labels = opt.get('dataseft', "ava") == "road_tube",
+                tube_labels = opt.get('dataset', "ava") == "road_tube",
                 batch_size=opt.val.batch_size,
                 shuffle=False,
                 num_workers=opt.val.get('workers', 1),
@@ -625,8 +625,9 @@ def profiler_wrapper(local_rank, args):
     with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
         with record_function("main_function"):
             main(local_rank, args)
-    print(f'writing profile to trace_{local_rank}.json')
-    prof.export_chrome_trace(os.path.join(args.prof_save_dir, f"trace_{local_rank}.json"))
+    savepath = os.path.join(args.prof_save_dir, f"trace_{local_rank}.json")
+    print(f'writing profile to {savepath}')
+    prof.export_chrome_trace(savepath)
 
 if __name__ == '__main__':
 
