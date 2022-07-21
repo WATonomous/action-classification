@@ -5,7 +5,7 @@ model_path: ./output/saved_models # where the model is saved
 #resume_path: ckpt_4.pth.tar # path of the saved checkpoint starting from model_path
 manual_seed: 1
 print_freq: 20
-dataset: "road" # ["road", "road_tubes"] if road_tubes, neck must be tube and head must be tube_acar
+dataset: "road" # always 'road', for both normal acar and tube_acar
 experiment_name: no_tubes
 # node * processes per node = # of cores that will be allocated
 # we have one node, but can have multiple processes per node to take advantage of

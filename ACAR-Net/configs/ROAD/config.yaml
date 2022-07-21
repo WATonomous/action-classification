@@ -5,7 +5,7 @@ model_path: ./output/saved_models # where the model is saved
 # resume_path: ckpt_4.pth.tar # path of the saved checkpoint starting from model_path
 manual_seed: 1
 print_freq: 20
-dataset: "road_tube"
+dataset: "road" #always road, for both normal acar and tube_acar
 experiment_name: "tubes"
 # node * processes per node = # of cores that will be allocated
 # we have one node, but can have multiple processes per node to take advantage of
@@ -132,7 +132,7 @@ val:
                 size: 64
                 step: 2
 
-    with_label: True
+    with_label: True # when this is True, eval loss is calculated and logged.
     eval_mAP:
         labelmap: /road/road_trainval_v1.0.json
         groundtruth: /road/road_trainval_v1.0.json

@@ -148,7 +148,6 @@ class AVADataLoader(data.DataLoader):
             drop_last=drop_last,
             **kwargs
         )
-        self.tube_labels = tube_labels
 
     def _collate_fn(self, batch):
         clips = [_['clip'] for _ in batch]

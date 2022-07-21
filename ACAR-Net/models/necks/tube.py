@@ -28,7 +28,7 @@ class TubeNeck(nn.Module):
         ----------
         data : dict
             {'aug_info': parameters used for data augmentation, 
-             'labels': labels for tubes rather than for just the keyframes, 
+             'labels': labels for the whole tube,
              'filenames': filenames for each example, 
              'mid_times': mid_times for each example}
 

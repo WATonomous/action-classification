@@ -94,7 +94,7 @@ class TubeACARHead(nn.Module):
             roi_fast_feats.append(self.head_roi_align(rois.clone(), f_f, H_s, W_s)) # (256, 7, 7) each
             
         # stack pooled fast and slow roi alignments
-        # these are of shape [num_rois, depth, n_slow_or_fast_frames, roi_spatial, roi_spatial]
+        # these are of shape [num_rois, channels, n_slow_or_fast_frames, roi_spatial, roi_spatial]
         roi_slow_feats = torch.stack(roi_slow_feats, dim=2) # (num_rois, 2048, 8, 7, 7)
         roi_fast_feats = torch.stack(roi_fast_feats, dim=2) # (num_rois, 256, 32, 7, 7)
         # these are of shape [num_rois, n_slow_or_fast_frames]

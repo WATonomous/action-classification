@@ -132,21 +132,11 @@ def main(local_rank, args):
         if opt.get('dataset', "ava") == "road":
             # ava is the default dataset when dataset is unspecified 
             # augmented train data has size 76139, the most of which have 91 frames. 
-            # important to note that the actual images are not read into memory here
             train_data = road.ROAD(
+                opt.model.neck.type == 'tube',
                 opt.train.root_path,
                 opt.train.annotation_path, 
                 opt.train.class_idx_path,
-                "train_1",
-                spatial_transform,
-                temporal_transform,
-            )
-        elif opt.get('dataset', "ava") == "road_tube":
-            train_data = road.ROADTube(
-                opt.train.root_path,
-                opt.train.annotation_path, 
-                opt.train.class_idx_path,
-                opt.train.stride,
                 "train_1",
                 spatial_transform,
                 temporal_transform,
@@ -163,10 +153,9 @@ def main(local_rank, args):
         # indices when its iterator is called.
         train_sampler = DistributedSampler(train_data, round_down=True)
 
-        if opt.get('dataset', "ava").startswith("road"):
+        if opt.get('dataset', "ava") == "road":
             train_loader = road.ROADDataLoader(    
                 train_data,
-                tube_labels = opt.get('dataset', "ava") == "road_tube",
                 batch_size=opt.train.batch_size,
                 shuffle=False,
                 num_workers=opt.train.get('workers', 1),
@@ -233,20 +222,11 @@ def main(local_rank, args):
     temporal_transform = getattr(temporal_transforms, val_aug.temporal.type)(**val_aug.temporal.get('kwargs', {}))
 
     if opt.get('dataset', "ava") == "road":                                                    
-        val_data = road.ROADmulticrop(         
+        val_data = road.ROADmulticrop( 
+            opt.model.neck.type == 'tube',
             opt.val.root_path,
             opt.val.annotation_path,
             opt.val.class_idx_path,
-            "val_1",
-            spatial_transform,
-            temporal_transform,
-        )
-    elif opt.get('dataset', "ava") == "road_tube":
-        val_data = road.ROADTubemulticrop(
-            opt.val.root_path,
-            opt.val.annotation_path, 
-            opt.val.class_idx_path,
-            opt.val.stride,
             "val_1",
             spatial_transform,
             temporal_transform,
@@ -265,7 +245,6 @@ def main(local_rank, args):
     if opt.get('dataset', "ava").startswith("road"):
         val_loader = road.ROADmulticropDataLoader(
                 val_data,
-                tube_labels = opt.get('dataset', "ava") == "road_tube",
                 batch_size=opt.val.batch_size,
                 shuffle=False,
                 num_workers=opt.val.get('workers', 1),
@@ -622,7 +601,7 @@ def val_epoch(epoch, data_loader, model, criterion, act_func,
 
 def profiler_wrapper(local_rank, args):
     print("Starting process with profiler on")
-    with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
+    with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True, with_stack = True) as prof:
         with record_function("main_function"):
             main(local_rank, args)
     savepath = os.path.join(args.prof_save_dir, f"trace_{local_rank}.json")
@@ -642,7 +621,7 @@ if __name__ == '__main__':
     parser.add_argument('--nnodes', type=int, default=None)
     parser.add_argument('--node_rank', type=int, default=None)
     parser.add_argument('--profile', action='store_true')
-    parser.add_argument('--prof_save_dir', type=str, default="./")
+    parser.add_argument('--prof_save_dir', type=str, default="./output/")
     args = parser.parse_args()
 
     with open(args.config) as f:
