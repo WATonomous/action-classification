@@ -171,35 +171,36 @@ ASSO_FUNCS = {  "iou": iou_batch,
                 "diou": diou_batch,
                 "ct_dist": ct_dist}
 
+# det_thresh, max_age=30, min_hits=3, 
+#         iou_threshold=0.3, delta_t=3, asso_func="iou", inertia=0.2, use_byte=False)
 
 class OCSort(object):
-    def __init__(self, det_thresh, max_age=30, min_hits=3, 
-        iou_threshold=0.3, delta_t=3, asso_func="iou", inertia=0.2, use_byte=False):
+    def __init__(self, config):
         """
         Sets key parameters for SORT
         """
-        self.max_age = max_age
-        self.min_hits = min_hits
-        self.iou_threshold = iou_threshold
+        self.max_age = config.max_age
+        self.min_hits = config.min_hits
+        self.iou_threshold = config.iou_threshold
         self.trackers = []
         self.frame_count = 0
-        self.det_thresh = det_thresh
-        self.delta_t = delta_t
-        self.asso_func = ASSO_FUNCS[asso_func]
-        self.inertia = inertia
-        self.use_byte = use_byte
+        self.det_thresh = config.det_thresh
+        self.delta_t = config.delta_t
+        self.asso_func = ASSO_FUNCS[config.asso_func]
+        self.inertia = config.inertia
+        self.use_byte = config.use_byte
+
         KalmanBoxTracker.count = 0
 
-    def update(self, output_results, img_info, img_size):
+    def update(self, output_results):
         """
         Params:
-          dets - a numpy array of detections in the format [[x1,y1,x2,y2,score],[x1,y1,x2,y2,score],...]
+          output_results - a numpy array of detections in the format [[x1,y1,x2,y2,score],[x1,y1,x2,y2,score],...]
         Requires: this method must be called once for each frame even with empty detections (use np.empty((0, 5)) for frames without detections).
         Returns the a similar array, where the last column is the object ID.
         NOTE: The number of objects returned may differ from the number of detections provided.
         """
-        if output_results is None:
-            output_results = np.empty((0, 5))
+        assert output_results is not None
 
         self.frame_count += 1
         # post_process detections
@@ -210,9 +211,11 @@ class OCSort(object):
             output_results = output_results.cpu().numpy()
             scores = output_results[:, 4] * output_results[:, 5]
             bboxes = output_results[:, :4]  # x1y1x2y2
-        img_h, img_w = img_info[0], img_info[1]
-        scale = min(img_size[0] / float(img_h), img_size[1] / float(img_w))
-        bboxes /= scale
+            
+        # this was assuming that the bboxes are not normalized to [0, 1]
+        # img_h, img_w = self.img_info[0], self.img_info[1]
+        # scale = min(self.img_size[0] / float(img_h), self.img_size[1] / float(img_w))
+        # bboxes /= scale
         dets = np.concatenate((bboxes, np.expand_dims(scores, axis=-1)), axis=1)
         inds_low = scores > 0.1
         inds_high = scores < self.det_thresh

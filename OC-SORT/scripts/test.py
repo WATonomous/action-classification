@@ -39,6 +39,12 @@ agent_ids = [1, 2, 3, 4]
 masks = np.array([(rand[:, 4] == agent_id) for agent_id in agent_ids])
 print(masks)
 
-a = np.empty((0, 5))
-a = np.append(a, [1, 2, 3, 4, 5, 6])
-print(a)
+# a = np.empty((0, 5))
+# a = np.append(a, [1, 2, 3, 4, 5, 6], axis=0)
+# a = np.append(a, [1, 2, 3, 4, 5, 6])
+# print(a)
+
+# getting the index in a list
+a = list([[1, 2], [3, 4]])
+print(a.index([3, 4]))
+

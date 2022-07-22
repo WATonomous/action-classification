@@ -22,7 +22,9 @@ RUN pip install \
 	ffmpeg \
 	moviepy \
 	'iopath<0.1.9,>=0.1.7' \
-	tqdm>=4.29.0
+	tqdm>=4.29.0 \ 
+	motmetrics \ 
+	filterpy
 
 # RUN pip install --pre 'torch==1.10.0.dev20210921+cu111' -f https://download.pytorch.org/whl/nightly/cu111/torch_nightly.html
 # RUN pip install torch==1.10.0+cu111 -f https://download.pytorch.org/whl/cu111/torch_stable.html
