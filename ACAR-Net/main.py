@@ -133,7 +133,6 @@ def main(local_rank, args):
             # ava is the default dataset when dataset is unspecified 
             # augmented train data has size 76139, the most of which have 91 frames. 
             train_data = road.ROAD(
-                opt.model.neck.type == 'tube',
                 opt.train.root_path,
                 opt.train.annotation_path, 
                 opt.train.class_idx_path,
@@ -223,7 +222,6 @@ def main(local_rank, args):
 
     if opt.get('dataset', "ava") == "road":                                                    
         val_data = road.ROADmulticrop( 
-            opt.model.neck.type == 'tube',
             opt.val.root_path,
             opt.val.annotation_path,
             opt.val.class_idx_path,

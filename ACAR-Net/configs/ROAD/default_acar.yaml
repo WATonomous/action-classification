@@ -79,7 +79,7 @@ train:
                 mean: [0.450, 0.450, 0.450]
                 std: [0.225, 0.225, 0.225]
         temporal:
-            type: TemporalCenterCrop
+            type: TemporalCenterRetentionCrop
             kwargs:
                 size: 64
                 step: 2
@@ -127,7 +127,7 @@ val:
                 mean: [0.450, 0.450, 0.450]
                 std: [0.225, 0.225, 0.225]
         temporal:
-            type: TemporalCenterCrop
+            type: TemporalCenterRetentionCrop
             kwargs:
                 size: 64
                 step: 2
