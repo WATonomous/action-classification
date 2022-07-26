@@ -9,6 +9,8 @@ from datasets.road_dataset import ROADOCSORT
 from trackers.ocsort_tracker.ocsort import OCSort
 from trackers.tracking_utils.evaluation import ROADMOTEvaluator
 
+ACTION_MATCHING_THRESH = 1e-5
+
 def main(args):
     """ TUBE GENERATOR
         Takes in detections in ROAD format, and produces another json file containing tube uids.
@@ -22,15 +24,15 @@ def main(args):
 
     # load data
     dataloader = ROADOCSORT(
-        annotation_path=opt.annotation_path, 
+        annotation_path=opt.Data.annotation_path, 
         save_tubes=opt.save_tubes,
-        ground_truth=opt.ground_truth
+        ground_truth=opt.Data.ground_truth
     )
 
-    if opt.evaluate:
+    if opt.Evaluation.evaluate:
         evaluator = ROADMOTEvaluator(
-            annotation_path=opt.annotation_path, 
-            accumulate=opt.accumulate,
+            annotation_path=opt.Evaluation.evaluation_path, 
+            accumulate=opt.Evaluation.accumulate,
         )
 
         accumulators = []
@@ -43,7 +45,7 @@ def main(args):
 
         # create separate trackers for each of the different agents, this is to avoid
         # ID switches across agents
-        agent_trackers = [OCSort(opt.ocsort) for _ in data['video_data']['agent_types']]
+        agent_trackers = [OCSort(opt.OCSORT) for _ in data['video_data']['agent_types']]
 
         # run the trackers all at once on each of the frames (passing agents that they are concerned with)
         online_targets = []
@@ -61,26 +63,22 @@ def main(args):
 
             # dict of masks for each agent
             frame_masks = {agent_id: (frame['frame_labels'][:, 5] == agent_id) for agent_id in data['video_data']['agent_types']}
-            indexes = list(range(len(frame['frame_labels']))) # indexes of all the boxes, thisis for matching actions
 
             # send each tracker their respective detections, consolidate tracks and their agent id
             # online_target: np.array([[x1, y1, x2, y2, tube_uid, agent_id, action_ids], ...]) which are the tracked detections in a frame
                 # online_targets is num_frame # of online_target ^^
             online_target = None
-            target_action = []
+
+            if opt.Data.match_actions: target_action = []
 
             for agent_id, agent_tracker in zip(data['video_data']['agent_types'], agent_trackers):
                 agent_frame_labels = frame['frame_labels'][frame_masks[agent_id]] # masks out the boxes that aren't the agent we want
-                agent_frame_index = indexes[frame_masks[agent_id]] # masks out the indexes of the boxes that aren't the agent we want
 
-                output_results = agent_frame_labels[:, :5]
+                output_results = np.array(agent_frame_labels[:, :5], dtype=float)
                 if output_results.size == 0:
                     output_results = np.empty((0, 5))
 
                 targets = agent_tracker.update(output_results)
-
-                # matching targets with their original action ids
-                
                 
                 # post processing to combine targets with their agent again
                 agent_ids = np.reshape(np.full(len(targets), agent_id), (len(targets), 1))
@@ -90,14 +88,19 @@ def main(args):
                 else:
                     online_target = np.concatenate((online_target, agent_targets), axis=0) 
 
-            # matching targets with their original action ids
-            for target in online_target:
-                for frame in frame['frame_labels']:
-                    pass
-                target_index = frame['frame_labels'].index(target[:5])
-                target_action.append(frame['frame_labels'][:, 6][target_index])
+            if opt.Data.match_actions:# matching targets with their original action ids
+                for target in online_target:
+                    target_index = 0
+                    for i_frame in frame['frame_labels']:
+                        if (np.abs(i_frame[:4] - target[:4]) < float(opt.Data.action_matching_thresh)).all():
+                            break
+                        
+                        target_index += 1
+
+                    target_action.append(frame['frame_labels'][:, 6][target_index])
             
-            target_actions.append(target_action)
+            if opt.Data.match_actions: target_actions.append(target_action)
+
             online_targets.append(online_target)
 
         if opt.progress:
@@ -112,12 +115,12 @@ def main(args):
             dataloader[idx] = (online_targets, target_actions)
 
         # if evaluate, evaluate on the ground truth tubes provided by ROAD
-        if opt.evaluate:
+        if opt.Evaluation.evaluate:
             # if no error occurs here, than python weird and doesn't care that a library 
             # is not imported
             accumulators.append(evaluator.eval_video(idx, online_targets[:, :4]))
 
-    if opt.evaluate: # summarize evaluation, perhaps write it too if needed
+    if opt.Evaluation.evaluate: # summarize evaluation, perhaps write it too if needed
         for accumulator in accumulators:
             print(evaluator.get_summary(accumulator, 'accumulator'))
     

@@ -1,29 +1,36 @@
-# track progress, this makes ocsort slower
-progress: True
+progress: True # track progress
+save_tubes: True # generated tubes are saved in a separate annotation file in the same directory as the original
+debug_frames: False # this will save ten frames of tracks to the same directory as main.py
 
-# do you want to compare generated tubes to the tubes labeled by ROAD?
-evaluate: False 
-accumulate: False # accumulate MOT score throughout all the videos
+Evaluation:
+  evaluation_path: /road/road_trainval_v1.0.json # path to the ROAD ground truth annotations
+  evaluate: False # do you want to compare generated tubes to the tubes labeled by ROAD?
+  accumulate: False # accumulate MOT score throughout all the videos
 
-# path to the annotation file
-annotation_path: /road/road_trainval_v1.0.json
+Data: 
+  annotation_path: /road/road_trainval_v1.0.json # path to the annotation file
+  ground_truth: True # are these annotations the ROAD ground truth annotations
+  match_actions: True # if ground truth data is given, should we also save the actions
+  action_matching_thresh: 1e-5 # matching threshold for matching a track with their action
 
-# this determines whether we are dealing with ground truth labels 
-# or multiple overlapping detections of varying confidence
-ground_truth: True
-# do you want to save the tubes produced by the tracker?
-# generated tubes are saved in a separate annotation file in the same directory as the original
-save_tubes: False 
+OCSORT: # OCSORT parameters
+  det_thresh: 0.5 # threshold for first round matching, detections for second matching are self.det_thresh > score > 0.1
+  max_age: 30 # max number of frames in which an object can be gone until that track is considered dead
+  min_hits: 3 # minimum number of times a detection must be hit until a track is formed (~vague, should look into)
+  iou_threshold: 0.3 # IOU between detection candidates and tracked detection for second round matching
 
-# this will save ten frames of tracks to the same directory as main.py
-debug_frames: False
+  delta_t: 3 # delta t, this is used for the Kalmann Filter
+  inertia: 0.2 # inertia, this is use for the Kalmann Filter
 
-ocsort:
-  det_thresh: 0.5
-  max_age: 30
-  min_hits: 3
-  iou_threshold: 0.3
-  delta_t: 3 
-  asso_func: "iou"
-  inertia: 0.2 
-  use_byte: False
+    # We support multiple ways for association cost calculation, by default
+    # we use IoU. GIoU may have better performance in some situations. We note 
+    # that we hardly normalize the cost by all methods to (0,1) which may not be 
+    # the best practice.
+
+    # ASSO_FUNCS = iou, giou, ciou, diou, ct_dist (check ocsort.py for how these functions specifically work)
+
+  asso_func: "iou" 
+  
+  use_byte: False # use BYTE tracker as second of association by OCR
+
+
