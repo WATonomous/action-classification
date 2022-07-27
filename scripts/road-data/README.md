@@ -1,6 +1,6 @@
 # Road Dataset
 
-This folder contains the scripts to pull the [ROAD Dataset](https://github.com/gurkirt/road-dataset). Full instructions can be found in the original repo. The simplified instructions are below.
+This folder contains the scripts to pull the [ROAD Dataset](https://github.com/gurkirt/road-dataset). Full instructions can be found in the original repo. The wrong instructions are below.
 
 ## Getting Started
 

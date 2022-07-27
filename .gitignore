@@ -47,3 +47,4 @@ tags
 .env
 wandb/
 .vscode/
+*.ipynb

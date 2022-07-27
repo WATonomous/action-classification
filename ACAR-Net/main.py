@@ -17,7 +17,7 @@ import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel
 
 from calc_mAP import run_evaluation
-from datasets import ava, spatial_transforms, temporal_transforms
+from datasets import ava, road, spatial_transforms, temporal_transforms
 from distributed_utils import init_distributed
 import losses
 from losses import *
@@ -27,6 +27,8 @@ from utils import *
 
 import tensorboard_funcs
 import wandb
+
+from torch.profiler import profile, record_function, ProfilerActivity
 
 def log_artifacts():
     results = wandb.Artifact(name = "results", type= "results", description = "results and config files")
@@ -38,9 +40,16 @@ def log_artifacts():
     wandb.finish()
 
 
+class MyError(Exception): 
+    pass
+
+
 def handler(signum, frame):
     print("Trying to log artifacts.... (Ctrl-C to stop)")
     log_artifacts()
+    raise MyError('Received signal ' + str(signum) +
+                  ' on line ' + str(frame.f_lineno) +
+                  ' in ' + frame.f_code.co_filename)    
 
 def main(local_rank, args):
     """
@@ -65,15 +74,16 @@ def main(local_rank, args):
 
     # opt as in options are loaded from config files provided as argument.
     opt = EasyDict(config)
+    opt.profile = args.profile
     opt.world_size = world_size
-
-    
     
     if rank == 0:
         if not opt.experiment_name:
             raise ValueError("No experiment name specified in run config.")
-        # else:
-        #     wandb.init(project='acar', name = opt.experiment_name, sync_tensorboard=True)
+        else:
+            # put all command line args and options into wandb.config
+            wandb_config = dict(command_line = vars(args), config_file = opt)
+            wandb.init(project='acar', name = opt.experiment_name, config = wandb_config, sync_tensorboard=True)
         signal.signal(signal.SIGINT, handler)
         mkdir(opt.result_path)
         mkdir(os.path.join(opt.result_path, 'tmp'))
@@ -122,10 +132,10 @@ def main(local_rank, args):
         if opt.get('dataset', "ava") == "road":
             # ava is the default dataset when dataset is unspecified 
             # augmented train data has size 76139, the most of which have 91 frames. 
-            # important to note that the actual images are not read into memory here
-            train_data = ava.ROAD(
+            train_data = road.ROAD(
+                opt.model.neck.type == 'tube',
                 opt.train.root_path,
-                opt.train.annotation_path,
+                opt.train.annotation_path, 
                 opt.train.class_idx_path,
                 "train_1",
                 spatial_transform,
@@ -143,17 +153,27 @@ def main(local_rank, args):
         # indices when its iterator is called.
         train_sampler = DistributedSampler(train_data, round_down=True)
 
-        # AVADataLoader is a torch data loader
-        train_loader = ava.AVADataLoader(
-            train_data,
-            batch_size=opt.train.batch_size,
-            shuffle=False,
-            num_workers=opt.train.get('workers', 1),
-            pin_memory=True,
-            sampler=train_sampler,
-            drop_last=True
-        )
-        
+        if opt.get('dataset', "ava") == "road":
+            train_loader = road.ROADDataLoader(    
+                train_data,
+                batch_size=opt.train.batch_size,
+                shuffle=False,
+                num_workers=opt.train.get('workers', 1),
+                pin_memory=True,
+                sampler=train_sampler,
+                drop_last=True
+            )
+        else:
+            train_loader = ava.AVADataLoader(    
+                train_data,
+                batch_size=opt.train.batch_size,
+                shuffle=False,
+                num_workers=opt.train.get('workers', 1),
+                pin_memory=True,
+                sampler=train_sampler,
+                drop_last=True
+            )
+                
         if rank == 0:
             logger.info('# train data: {}'.format(len(train_data)))
             logger.info('train spatial aug: {}'.format(spatial_transform))
@@ -202,7 +222,8 @@ def main(local_rank, args):
     temporal_transform = getattr(temporal_transforms, val_aug.temporal.type)(**val_aug.temporal.get('kwargs', {}))
 
     if opt.get('dataset', "ava") == "road":                                                    
-        val_data = ava.ROADmulticrop(
+        val_data = road.ROADmulticrop( 
+            opt.model.neck.type == 'tube',
             opt.val.root_path,
             opt.val.annotation_path,
             opt.val.class_idx_path,
@@ -221,14 +242,24 @@ def main(local_rank, args):
 
     val_sampler = DistributedSampler(val_data, round_down=False)
 
-    val_loader = ava.AVAmulticropDataLoader(
-        val_data,
-        batch_size=opt.val.batch_size,
-        shuffle=False,
-        num_workers=opt.val.get('workers', 1),
-        pin_memory=True,
-        sampler=val_sampler
-    )
+    if opt.get('dataset', "ava").startswith("road"):
+        val_loader = road.ROADmulticropDataLoader(
+                val_data,
+                batch_size=opt.val.batch_size,
+                shuffle=False,
+                num_workers=opt.val.get('workers', 1),
+                pin_memory=True,
+                sampler=val_sampler
+            )
+    else:
+        val_loader = ava.AVAmulticropDataLoader(
+                val_data,
+                batch_size=opt.val.batch_size,
+                shuffle=False,
+                num_workers=opt.val.get('workers', 1),
+                pin_memory=True,
+                sampler=val_sampler
+            )
     
     val_logger = None
     if rank == 0:
@@ -266,8 +297,11 @@ def main(local_rank, args):
             if rank == 0:
                 logger.info('Also loaded optimizer and scheduler from checkpoint {}'.format(opt.resume_path))
 
-    criterion, act_func = getattr(losses, opt.loss.type)(**opt.loss.get('kwargs', {}))
-
+    if opt.loss.type.startswith("ava"):
+        criterion, act_func = getattr(losses, opt.loss.type)(**opt.loss.get('kwargs', {}))
+    else:
+        # non-ava loss criteria don't require arguments.
+        criterion, act_func = getattr(losses, opt.loss.type)()
 
                         ###################################
                             # TRAINING AND VALIDATION
@@ -279,7 +313,7 @@ def main(local_rank, args):
     else:  # training and validation mode
         for e in range(begin_epoch, opt.train.n_epochs + 1):
             train_sampler.set_epoch(e)
-            train_epoch(e, train_loader, net, criterion, optimizer, scheduler,
+            train_epoch(e, train_loader, net, criterion, act_func, optimizer, scheduler,
                         opt, logger, train_logger, train_batch_logger, rank, world_size, writer)
             
             if e % opt.train.val_freq == 0:
@@ -291,7 +325,7 @@ def main(local_rank, args):
         writer.close()
     
     
-def train_epoch(epoch, data_loader, model, criterion, optimizer, scheduler, 
+def train_epoch(epoch, data_loader, model, criterion, act_func, optimizer, scheduler, 
                 opt, logger, epoch_logger, batch_logger, rank, world_size, writer):
     if rank == 0:
         logger.info('Training at epoch {}'.format(epoch))
@@ -310,8 +344,11 @@ def train_epoch(epoch, data_loader, model, criterion, optimizer, scheduler,
 
     end_time = time.time()
     for i, data in enumerate(data_loader):
+        if opt.profile and i > 0:
+            # when profiling code, its useful to stop after the first batch
+            # because we will get our profile faster and have a smaller file this way.
+            break
         # data should now contain the actual data.
-
         """
         data:
         - clips:
@@ -333,6 +370,7 @@ def train_epoch(epoch, data_loader, model, criterion, optimizer, scheduler,
         scheduler.step(curr_step)
 
         # FORWARD PASS !!!!
+        # with torch.autograd.detect_anomaly():
         ret = model(data)
 
         num_rois = ret['num_rois']
@@ -343,16 +381,12 @@ def train_epoch(epoch, data_loader, model, criterion, optimizer, scheduler,
         dist.all_reduce(tot_rois)
         tot_rois = tot_rois.item()
 
-        if tot_rois == 0:
-            end_time = time.time()
-            continue
-
         optimizer.zero_grad()
 
         if num_rois > 0:
             loss = criterion(outputs, targets)
             loss = loss * num_rois / tot_rois * world_size
-            batch_pred_prob = ava_pose_softmax_func(outputs)
+            batch_pred_prob = act_func(outputs)
             train_epoch_pred_prob = torch.cat( (train_epoch_pred_prob, batch_pred_prob.detach().cpu()), axis=0 )
             train_epoch_targets = torch.cat( (train_epoch_targets, targets.detach().cpu()), axis=0 )
         else:
@@ -362,7 +396,9 @@ def train_epoch(epoch, data_loader, model, criterion, optimizer, scheduler,
                     loss = loss + param.sum()
             loss = 0. * loss
 
+        # with torch.autograd.detect_anomaly():
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=opt.train.max_norm)
         optimizer.step()
 
         reduced_loss = loss.clone()
@@ -389,7 +425,7 @@ def train_epoch(epoch, data_loader, model, criterion, optimizer, scheduler,
                         'Iter [{1}/{2}]\t'
                         'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                         'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
-                        'Loss {loss.val:.4f} ({loss.avg:.4f})'.format(
+                        'Loss {loss.val:.6f} ({loss.avg:.6f})'.format(
                             epoch,
                             i + 1,
                             len(data_loader),
@@ -430,7 +466,7 @@ def train_epoch(epoch, data_loader, model, criterion, optimizer, scheduler,
         
         logger.info('-' * 100)
         
-    tensorboard_funcs.add_model_weights_as_histogram(model, writer, epoch)            
+        tensorboard_funcs.add_model_weights_as_histogram(model, writer, epoch)            
 
 def val_epoch(epoch, data_loader, model, criterion, act_func,
               opt, logger, epoch_logger, rank, world_size, writer):
@@ -454,6 +490,10 @@ def val_epoch(epoch, data_loader, model, criterion, act_func,
 
     end_time = time.time()
     for i, data in enumerate(data_loader):
+        if opt.profile and i > 0:
+            # when profiling code, its useful to stop after the first batch
+            # because we will get our profile faster and have a smaller file this way.
+            break
 
         data_time.update(time.time() - end_time)
 
@@ -466,10 +506,9 @@ def val_epoch(epoch, data_loader, model, criterion, act_func,
             end_time = time.time()
             continue
         
-        batch_pred_prob = ava_pose_softmax_func(outputs)
+        batch_pred_prob = act_func(outputs)
         val_epoch_pred_prob = torch.cat( (val_epoch_pred_prob, batch_pred_prob.detach().cpu()), axis=0 )
         val_epoch_targets = torch.cat( (val_epoch_targets, targets.detach().cpu()), axis=0 )
-
 
         if calc_loss:
             loss = criterion(outputs, targets)
@@ -560,7 +599,18 @@ def val_epoch(epoch, data_loader, model, criterion, act_func,
     dist.barrier()
 
 
+def profiler_wrapper(local_rank, args):
+    print("Starting process with profiler on")
+    with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True, with_stack = True) as prof:
+        with record_function("main_function"):
+            main(local_rank, args)
+    savepath = os.path.join(args.prof_save_dir, f"trace_{local_rank}.json")
+    print(f'writing profile to {savepath}')
+    prof.export_chrome_trace(savepath)
+
 if __name__ == '__main__':
+
+    # TODO add functionality to resume from a specified checkpoint without having to edit the config
 
     parser = argparse.ArgumentParser(description='PyTorch AVA Training and Evaluation')
     parser.add_argument('--config', type=str, required=True)
@@ -570,17 +620,19 @@ if __name__ == '__main__':
     parser.add_argument('--master_port', type=int, default=31114)
     parser.add_argument('--nnodes', type=int, default=None)
     parser.add_argument('--node_rank', type=int, default=None)
+    parser.add_argument('--profile', action='store_true')
+    parser.add_argument('--prof_save_dir', type=str, default="./output/")
     args = parser.parse_args()
 
     with open(args.config) as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
     opt = EasyDict(config)
-    args.nproc_per_node = opt.nproc_per_node # hack to make the rest of the code work
-
     # if we're debugging, don't log anything
 
     ####################################################
     # To turn off wandb, run: export WANDB_MODE=offline
     ####################################################
-
-    torch.multiprocessing.spawn(main, args=(args,), nprocs=opt.nproc_per_node)
+    if args.profile:
+        torch.multiprocessing.spawn(profiler_wrapper, args=(args,), nprocs=args.nproc_per_node)
+    else:
+        torch.multiprocessing.spawn(main, args=(args,), nprocs=args.nproc_per_node)

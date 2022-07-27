@@ -20,7 +20,7 @@ class AVA_model(nn.Module):
             i_b = {'clips': data['clips']}
             o_b = self.backbone(i_b)
 
-            i_n = {'aug_info': data['aug_info'], 'labels': data['labels'], 
+            i_n = {'aug_info': data['aug_info'], 'labels': data['labels'],
                    'filenames': data['filenames'], 'mid_times': data['mid_times']}
             o_n = self.neck(i_n)
 
