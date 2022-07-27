@@ -1,5 +1,5 @@
 progress: True # track progress
-save_tubes: True # generated tubes are saved in a separate annotation file in the same directory as the original
+save_tubes: True # generated tubes are saved in a separate annotation file in the same directory as the original, we append '_ocsort' to the annotation name
 debug_frames: False # this will save ten frames of tracks to the same directory as main.py
 
 Evaluation:
