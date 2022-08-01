@@ -127,7 +127,6 @@ def batch_pad(images, alignment=1, pad_value=0):
 class AVADataLoader(data.DataLoader):
     def __init__(self,
                  dataset,
-                 tube_labels,
                  batch_size=1,
                  shuffle=False,
                  sampler=None,
@@ -204,11 +203,11 @@ class AVA(data.Dataset):
         Returns
         -------
         dict
-            clip: rgb_images of frames
-            aug_info: some sort of info about the augmentations done to the clips
-            label: the labels of the keyframe
-            video_name: name of the video
-            mid_time: frame_id of the key frame
+            clip: List[torch.Tensor], Tensor.shape is (3,32,256,341), rgb_images of frames
+            aug_info: List[Dict], info about the augmentations done to the clips
+            label: List[Dict] for the keyframe, contains a list of annotations in that frame.
+            video_name: str, name of the video
+            mid_time: str, frame_id of the key frame
 
         Raises
         ------

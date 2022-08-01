@@ -57,7 +57,6 @@ train:
     root_path: /road/rgb-images
     annotation_path: /road/road_trainval_v1.0.json
     class_idx_path: /road/class_name_gen_1.json
-    stride: 1
     batch_size: 8
     workers: 8
         
@@ -105,12 +104,11 @@ train:
 
 val:
     root_path: /road/rgb-images
-    annotation_path: /road/road_trainval_v1.0.json #/road/road_trainval_v1.0_ocsort.json
+    annotation_path: /road/road_trainval_v1.0.json
     class_idx_path: /road/class_name_gen_1.json
     # Maxes all ram and about half of GPUs on thor
     # batch_size: 24
     # workers: 20
-    stride: 1
     batch_size: 8
     workers: 8
     

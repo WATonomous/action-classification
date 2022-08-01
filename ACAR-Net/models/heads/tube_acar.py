@@ -53,14 +53,15 @@ class TubeACARHead(nn.Module):
             in other words, an invalid roi. This creates a tensor of zeros.
             
             data:
-                features: slow and fast features, [0] is slow, [1] is fast
-                rois: all the rois we are concerned with 
+                features: List[torch.Tensor], list of length 2, representing slow and fast features, [0] is slow, 
+                    [1] is fast. Tensor shapes are (8, 2048, 8, 16, 22) and (8, 256, 32, 16, 22) for slow and fast respectively.
+                rois: torch.Tensor of shape (num_rois, 32, 5). All the rois we are concerned with in the keyframes of the batch.
                     (each label has 32 bboxes corrosponding to each fast frame)
-                num_rois: total number of rois
-                roi_ids: where each batch of rois end in the list of rois
-                sizes_before_padding: image size before padding
+                num_rois: int, total number of rois
+                roi_ids: List[int] the indices of `rois` that separate the rois for each example in the batch.
+                sizes_before_padding: List[List], image size before padding
             returns:
-                outputs: class predictions
+                outputs: torch.Tensor of shape (num_rois, num action classes), the class predictions logits for each roi.
         '''
         if not isinstance(data['features'], list):
             feats = [data['features']]

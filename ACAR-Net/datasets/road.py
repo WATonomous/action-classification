@@ -68,7 +68,7 @@ class ROAD(data.Dataset):
         A datapoint (a frame) is valid if it can be a center frame of a clip with
         a number of frames equal to self.num_frames_in_clip.
 
-        Each datapoint has the format
+        We compile the following information for each frame (this is stored in self.data)
         {
             'video': str, name of video,
             'time': int, this index of the frame in the video,
@@ -147,7 +147,6 @@ class ROAD(data.Dataset):
                 n_frames = clip_end_frame - clip_start_frame + 1
 
                 # then we gather all label information in this frame.
-                assert len(frame['annos']) > 0, frame['annotated']
                 labels = []
                 for annon in frame['annos'].values():
                     for action_id in annon['action_ids']:
@@ -199,11 +198,12 @@ class ROAD(data.Dataset):
         Returns
         -------
         dict
-            clip: rgb_images of frames
-            aug_info: some sort of info about the augmentations done to the clips
-            label: the labels of all frames in the tube
-            video_name: name of the video
-            mid_time: frame_id of the key frame
+            clip: List[torch.Tensor], Tensor.shape is (3,32,256,341), rgb_images of frames
+            aug_info: List[Dict], info about the augmentations done to the clips
+            label: List[List[Dict]] for each frame in clip (length 32), contains a list of annotations
+                in the frame, overall representing the labels of all frames in the tube.
+            video_name: str, name of the video
+            mid_time: str, frame_id of the key frame
 
         Raises
         ------

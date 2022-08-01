@@ -24,7 +24,7 @@ model:
     backbone:
         arch: slowfast50
         learnable: True
-        pretrain:
+        pretrain:   
             path: /road/acar_models/SLOWFAST_R50_K400.pth.tar
         kwargs:
             alpha: 4
@@ -57,7 +57,6 @@ train:
     root_path: /road/rgb-images
     annotation_path: /road/road_trainval_v1.0.json
     class_idx_path: /road/class_name_gen_1.json
-    stride: 1
     batch_size: 8
     workers: 8
         
@@ -110,7 +109,6 @@ val:
     # Maxes all ram and about half of GPUs on thor
     # batch_size: 24
     # workers: 20
-    stride: 1
     batch_size: 8
     workers: 8
     
