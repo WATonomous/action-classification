@@ -57,14 +57,18 @@ class ROADOCSORT(data.Dataset):
 
         for frame in self.ann_dict['db'][video]['frames'].values():
             dp = {}
-            dp['frame_id'] = frame['rgb_image_id']
+            if ground_truth:
+                dp['frame_id'] = frame['rgb_image_id']
+            else:
+                dp['frame_id'] = frame['input_image_id']
+
             dp['frame_labels'] = np.empty((0, LABEL_LENGTH))
 
             if frame['annotated']:
                 for annon in frame['annos'].values():
                     # 1 is the confidence score only if annon box is the ground truth,
                     # ocsort is actually built to handle multiple detections of varying confidence
-                    conf = lambda x: 1 if x else annon['conf']
+                    conf = lambda x: 1 if x else annon['score']
                     
                     # dp['frame_labels'] is [[x1, y1, x2, y2, score, agent, action_ids], ...]
                     box = list(annon['box'])
