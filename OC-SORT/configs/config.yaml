@@ -10,7 +10,7 @@ Evaluation:
 Data: 
 
   # This is for Detections coming out of the detector
-  annotation_path: /road/detections/eval/val1_detections_inactive_merged_gt_format_score_0.1.jsonl
+  annotation_path: /road/val1_detections_inactive_merged_gt_format_score_0.7.jsonl
   ground_truth: False
   match_actions: False
 

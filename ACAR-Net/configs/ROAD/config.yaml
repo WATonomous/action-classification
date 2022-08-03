@@ -6,7 +6,7 @@ resume_path: ckpt_6.pth.tar # path of the saved checkpoint starting from model_p
 manual_seed: 1
 print_freq: 20
 dataset: "road" #always road, for both normal acar and tube_acar
-experiment_name: "ocsort_acar_eval"
+experiment_name: "optflowDET_ocsort_acar_eval"
 # node * processes per node = # of cores that will be allocated
 # we have one node, but can have multiple processes per node to take advantage of
 # multiple GPU training (1 GPU per process). Resource: https://yangkky.github.io/2019/07/08/distributed-pytorch-tutorial.html 
@@ -105,7 +105,7 @@ train:
 
 val:
     root_path: /road/rgb-images
-    annotation_path: /road/road_trainval_v1.0_ocsort.json
+    annotation_path: /road/val1_detections_inactive_merged_gt_format_score_0.7_ocsort.json
     class_idx_path: /road/class_name_gen_1.json
     # Maxes all ram and about half of GPUs on thor
     # batch_size: 24

@@ -26,7 +26,8 @@ def main(args):
     dataloader = ROADOCSORT(
         annotation_path=opt.Data.annotation_path, 
         save_tubes=opt.save_tubes,
-        ground_truth=opt.Data.ground_truth
+        ground_truth=opt.Data.ground_truth,
+        match_actions=opt.Data.match_actions
     )
 
     if opt.Evaluation.evaluate:

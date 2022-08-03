@@ -7,7 +7,7 @@ import torch.utils.data as data
 LABEL_LENGTH = 7 # dp['frame_labels'] is [[x1, y1, x2, y2, score, agent, action_ids], ...]
 
 class ROADOCSORT(data.Dataset):
-    def __init__(self, annotation_path, save_tubes, ground_truth):
+    def __init__(self, annotation_path, save_tubes, ground_truth, match_actions):
         ''' ROAD Dataset class:
         Reads ROAD annotations and provides the minimum compatible with OC_SORT and the
         evaluation of it. Saves produced tubes into new json annotation file
@@ -23,13 +23,15 @@ class ROADOCSORT(data.Dataset):
         '''
         self.data_dict = {} # data dictionary for videos and each of their frames, this is the minimum we need to pass
         self.bbox_counter = 0 # used when saving tubes, counts total bboxes saved
+        self.ground_truth = ground_truth
+        self.match_actions = match_actions
 
         with open(annotation_path, "r") as f:
             fs = f.read()
             self.ann_dict = json.loads(fs) # annotation dictionary
 
             for video in self.ann_dict['db'].keys():
-                self.append_new_data(video, ground_truth)     
+                self.append_new_data(video)     
 
         if save_tubes:
             # get the name of the annotation file 
@@ -45,7 +47,7 @@ class ROADOCSORT(data.Dataset):
         if hasattr(self, 'new_annotation_path'):
             json.dump(self.ann_dict, self.w)    
 
-    def append_new_data(self, video, ground_truth): 
+    def append_new_data(self, video): 
         ''' takes in the video name and annotation dictionary to create a list of 
             consecutive frames for this video in the data_dict, each frame is 
             a list of detections and their scores.
@@ -57,7 +59,7 @@ class ROADOCSORT(data.Dataset):
 
         for frame in self.ann_dict['db'][video]['frames'].values():
             dp = {}
-            if ground_truth:
+            if self.ground_truth:
                 dp['frame_id'] = frame['rgb_image_id']
             else:
                 dp['frame_id'] = frame['input_image_id']
@@ -72,7 +74,7 @@ class ROADOCSORT(data.Dataset):
                     
                     # dp['frame_labels'] is [[x1, y1, x2, y2, score, agent, action_ids], ...]
                     box = list(annon['box'])
-                    box.append(conf(ground_truth))
+                    box.append(conf(self.ground_truth))
                     box.append(annon['agent_ids'][0])
                     box.append(annon['action_ids'])
 
@@ -103,6 +105,9 @@ class ROADOCSORT(data.Dataset):
             video_key = list(self.data_dict.keys())[index]
 
             for idx, online_target in enumerate(online_targets):
+                if not self.ground_truth and idx == 0: # this because adding optical flow removes the first frame
+                    continue
+
                 if 'annos' in self.ann_dict['db'][video_key]['frames'][str(idx + 1)]:
                     del self.ann_dict['db'][video_key]['frames'][str(idx + 1)]['annos']
 
@@ -110,8 +115,11 @@ class ROADOCSORT(data.Dataset):
                     self.ann_dict['db'][video_key]['frames'][str(idx + 1)]['annotated'] = 1
                     # convert list of annotations to a dictionary of them, save into ann_dict
                     self.ann_dict['db'][video_key]['frames'][str(idx + 1)]['annos'] = {}
-
-                    target_action = target_actions[idx]
+                    
+                    if self.match_actions:
+                        target_action = target_actions[idx]
+                    else:
+                        target_action = [1 for _ in online_target] # set to 1 as a fake ID for ACAR's calc_mAP, this design should change...
 
                     for target, action in zip(online_target, target_action):
                         bbox_name = f"b{self.bbox_counter:06}"
