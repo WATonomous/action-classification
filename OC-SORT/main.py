@@ -33,10 +33,10 @@ def main(args):
     if opt.Evaluation.evaluate:
         evaluator = ROADMOTEvaluator(
             annotation_path=opt.Evaluation.evaluation_path, 
-            accumulate=opt.Evaluation.accumulate,
         )
 
         accumulators = []
+        names = []
 
     # enumerate through data, produce tubes
     for idx, data in enumerate(dataloader):
@@ -50,7 +50,7 @@ def main(args):
 
         # run the trackers all at once on each of the frames (passing agents that they are concerned with)
         online_targets = []
-        target_actions = [] # this keeps track of the action ids of the boxes [[action_ids per target], ...]
+        if opt.Data.match_actions: target_actions = [] # this keeps track of the action ids of the boxes [[action_ids per target], ...]
 
         # progress through the video
         if opt.progress:
@@ -113,17 +113,17 @@ def main(args):
 
         # if save, pass tracks back into dataloader to save into ann_dict
         if opt.save_tubes:
+            if not opt.Data.match_actions: target_actions = []
             dataloader[idx] = (online_targets, target_actions)
 
         # if evaluate, evaluate on the ground truth tubes provided by ROAD
         if opt.Evaluation.evaluate:
-            # if no error occurs here, than python weird and doesn't care that a library 
-            # is not imported
-            accumulators.append(evaluator.eval_video(idx, online_targets[:, :4]))
+            names.append(data['video_name'])
+            accumulators.append(evaluator.eval_video(idx, online_targets))
 
     if opt.Evaluation.evaluate: # summarize evaluation, perhaps write it too if needed
-        for accumulator in accumulators:
-            print(evaluator.get_summary(accumulator, 'accumulator'))
+        summary = evaluator.get_summary(accumulators, names)
+        print(summary)
     
 
 if __name__ == '__main__':

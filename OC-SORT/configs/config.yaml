@@ -3,16 +3,14 @@ save_tubes: True # generated tubes are saved in a separate annotation file in th
 debug_frames: False # this will save ten frames of tracks to the same directory as main.py
 
 Evaluation:
+  evaluate: True # do you want to compare generated tubes to the tubes labeled by ROAD?
   evaluation_path: /road/road_trainval_v1.0.json # path to the ROAD ground truth annotations
-  evaluate: False # do you want to compare generated tubes to the tubes labeled by ROAD?
-  accumulate: False # accumulate MOT score throughout all the videos
 
 Data: 
-
   # This is for Detections coming out of the detector
-  annotation_path: /road/val1_detections_inactive_merged_gt_format_score_0.7.jsonl
-  ground_truth: False
-  match_actions: False
+  annotation_path: /road/road_trainval_v1.0.json
+  ground_truth: True
+  match_actions: True
 
   # annotation_path: /road/road_trainval_v1.0.json # path to the annotation file
   # ground_truth: True # are these annotations the ROAD ground truth annotations
@@ -29,12 +27,12 @@ OCSORT: # OCSORT parameters
   delta_t: 3 # delta t, this is used for the Kalmann Filter
   inertia: 0.2 # inertia, this is use for the Kalmann Filter
 
-    # We support multiple ways for association cost calculation, by default
-    # we use IoU. GIoU may have better performance in some situations. We note 
-    # that we hardly normalize the cost by all methods to (0,1) which may not be 
-    # the best practice.
+  # We support multiple ways for association cost calculation, by default
+  # we use IoU. GIoU may have better performance in some situations. We note 
+  # that we hardly normalize the cost by all methods to (0,1) which may not be 
+  # the best practice.
 
-    # ASSO_FUNCS = iou, giou, ciou, diou, ct_dist (check ocsort.py for how these functions specifically work)
+  # ASSO_FUNCS = iou, giou, ciou, diou, ct_dist (check ocsort.py for how these functions specifically work)
 
   asso_func: "iou" 
   

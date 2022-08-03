@@ -3,6 +3,8 @@ import json
 import numpy as np
 import copy
 import motmetrics as mm
+
+from .eval_utils import UIDtoNumber, xyxy2xywh
 mm.lap.default_solver = 'lap'
 
 LABEL_LENGTH = 5 # dp['frame_labels'] is [[x1, y1, x2, y2, tube_uid], ...]
@@ -16,13 +18,11 @@ class ROADMOTEvaluator(object):
             accumulate: determines whether the evaluator should accumulate the score
                 throughout all the videos. Otherwise, each video gets a score.
     '''
-    def __init__(self, annotation_path, accumulate):
-        self.accumulate = accumulate
+    def __init__(self, annotation_path):
         self.eval_dict = {}
         ''' Eval Dictionary: {
                 video_name: {
-                    'frames': [[x1, y1, x2, y2, tube_uid], ...], 
-                    'tube_uids': [tube_uid, tube_uid, ...], 
+                    'frames': [[x1, y1, x2, y2, tube_uid], ...],  
                     'num_frames': int(number of frames in the video)
                 }
             }
@@ -33,6 +33,7 @@ class ROADMOTEvaluator(object):
             self.ann_dict = json.loads(fs) # annotation dictionary
 
             for video in self.ann_dict['db'].keys():
+                self.uid2number = UIDtoNumber()
                 self.append_new_data(video)     
 
         self.reset_accumulator()
@@ -44,7 +45,6 @@ class ROADMOTEvaluator(object):
         '''
         self.eval_dict[video] = {} # initialize
         self.eval_dict[video]['frames'] = []
-        self.eval_dict[video]['tube_uids'] = []
         self.eval_dict[video]['num_frames'] = self.ann_dict['db'][video]['numf']
 
         for frame in self.ann_dict['db'][video]['frames'].values():
@@ -55,11 +55,10 @@ class ROADMOTEvaluator(object):
             if frame['annotated']:
                 for annon in frame['annos'].values():
                     # dp['frame_labels'] is [[x1, y1, x2, y2, tube_uid], ...]
-                    dp['frame_labels'] = np.append(dp['frame_labels'], 
-                        self.xyxy2xywh(annon['box']).append(annon['tube_uid'])
-                        ) 
-                    
-                    self.eval_dict[video]['tube_uids'].append(annon['tube_uid'])
+                    xywh = xyxy2xywh(np.array(annon['box'], dtype=object))
+                    tube_id = self.uid2number.uid2number(annon['tube_uid'])
+                    xywh = np.append(xywh, tube_id)
+                    dp['frame_labels'] = np.append(dp['frame_labels'], [xywh], axis=0)
 
             self.eval_dict[video]['frames'].append(dp)
 
@@ -80,35 +79,31 @@ class ROADMOTEvaluator(object):
         return events
 
     def eval_video(self, idx, video):
-        # video coming in is np.array([[x1, y1, x2, y2, tube_uid], ...])
-        if not self.accumulate:
-            self.reset_accumulator()
+        """ video coming in is 
+                np.array([
+                        array([[x1, y1, x2, y2, tube_uid, agent_id], ...]), 
+                        array([[x1, y1, x2, y2, tube_uid, agent_id], ...]), 
+                        ...
+                        ])
+        """
+        self.reset_accumulator()
 
-        gt_key = self.eval_dict.keys()[idx] # ground truth
+        print(idx)
+        gt_key = list(self.eval_dict.keys())[idx] # ground truth
         gt_video = self.eval_dict[gt_key]
 
         for idx, frame in enumerate(video):
-            frame[:, :3] = self.xyxy2xywh(frame[:, :3]) # [[x, y, w, h, id], ...]
+            frame[:, :4] = xyxy2xywh(frame[:, :4]) # [[x, y, w, h, tube_id, agent_id], ...]
 
-            trk_xywhs = frame[:, :3]
-            trk_ids = frame[:, 3:]
+            trk_xywhs = frame[:, :4]
+            trk_ids = frame[:, 4]
 
-            gt_xywhs = gt_video['frames'][idx]
-            gt_ids = gt_video['tube_uids'][idx]
+            gt_xywhs = gt_video['frames'][idx]['frame_labels'][:, :4]
+            gt_ids = gt_video['frames'][idx]['frame_labels'][:, 4]
 
             self.eval_frame(trk_xywhs, trk_ids, gt_xywhs, gt_ids, rtn_events=False)
 
         return self.acc
-
-    def xyxy2xywh(x):
-        # Convert nx4 boxes from [x1, y1, x2, y2] to [x, y, w, h] where xy1=top-left, xy2=bottom-right
-        y = np.copy(x)
-        y[:, 0] = (x[:, 0] + x[:, 2]) / 2  # x center
-        y[:, 1] = (x[:, 1] + x[:, 3]) / 2  # y center
-        y[:, 2] = x[:, 2] - x[:, 0]  # width
-        y[:, 3] = x[:, 3] - x[:, 1]  # height
-
-        return y
 
     @staticmethod
     def get_summary(accs, names, metrics=('mota', 'num_switches', 'idp', 'idr', 'idf1', 'precision', 'recall')):
@@ -125,7 +120,13 @@ class ROADMOTEvaluator(object):
             generate_overall=True
         )
 
-        return summary
+        strsummary = mm.io.render_summary(
+            summary,
+            formatters=mh.formatters,
+            namemap=mm.io.motchallenge_metric_names
+        )
+
+        return strsummary
 
     @staticmethod
     def save_summary(summary, filename):
