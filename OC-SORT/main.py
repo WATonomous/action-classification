@@ -5,7 +5,8 @@ import numpy as np
 from tqdm import tqdm
 
 from easydict import EasyDict
-from datasets.road_dataset import ROADOCSORT
+from data.road_annotations import ROADOCSORT
+from data.road_video import ROADDebugVideo
 from trackers.ocsort_tracker.ocsort import OCSort
 from trackers.tracking_utils.evaluation import ROADMOTEvaluator
 
@@ -22,24 +23,36 @@ def main(args):
         config = yaml.load(f, Loader=yaml.FullLoader)
     opt = EasyDict(config)
 
+    Data_opts = opt.Data
+    Evaluation_opts = opt.Evaluation 
+    Debug_opts = opt.Debug
+
+    if Debug_opts.debug_video:
+        video_builder = ROADDebugVideo(opt.Video_Builder)
+
     # load data
     dataloader = ROADOCSORT(
-        annotation_path=opt.Data.annotation_path, 
+        annotation_path=Data_opts.annotation_path, 
         save_tubes=opt.save_tubes,
-        ground_truth=opt.Data.ground_truth,
-        match_actions=opt.Data.match_actions
+        ground_truth=Data_opts.ground_truth,
+        match_actions=Data_opts.match_actions
     )
 
-    if opt.Evaluation.evaluate:
+    if Data_opts.give_video_names == True:
+        print("Available Videos to Debug with:")
+        for name in dataloader.get_video_names():
+            print(name)
+
+    if Evaluation_opts.evaluate:
         evaluator = ROADMOTEvaluator(
-            annotation_path=opt.Evaluation.evaluation_path, 
+            annotation_path=Evaluation_opts.evaluation_path, 
         )
 
         accumulators = []
         names = []
 
     # enumerate through data, produce tubes
-    for idx, data in enumerate(dataloader):
+    for data in dataloader:
         ''' data contains {'video_name': string, 'video_data': {'frames': [frame_annos], 'agent_types': [list of agent types]}}
             where frame_annos is {'frame_id': int, 'frame_labels': [[x1, y1, x2, y2, score, agent, action_ids], ...]}
         '''
@@ -50,15 +63,14 @@ def main(args):
 
         # run the trackers all at once on each of the frames (passing agents that they are concerned with)
         online_targets = []
-        if opt.Data.match_actions: target_actions = [] # this keeps track of the action ids of the boxes [[action_ids per target], ...]
+        if Data_opts.match_actions: target_actions = [] # this keeps track of the action ids of the boxes [[action_ids per target], ...]
 
         # progress through the video
         if opt.progress:
             print(f"{data['video_name']}:")
-            progress = tqdm(total=len(data['video_data']['frames']), ncols=100)
+            progress = tqdm(total=len(data['video_data']['frames']), ncols=50)
 
         for frame in data['video_data']['frames']:
-            # tqdm is slower than ocsort
             if opt.progress:
                 progress.update()
 
@@ -70,7 +82,7 @@ def main(args):
                 # online_targets is num_frame # of online_target ^^
             online_target = None
 
-            if opt.Data.match_actions: target_action = []
+            if Data_opts.match_actions: target_action = []
 
             for agent_id, agent_tracker in zip(data['video_data']['agent_types'], agent_trackers):
                 agent_frame_labels = frame['frame_labels'][frame_masks[agent_id]] # masks out the boxes that aren't the agent we want
@@ -89,39 +101,40 @@ def main(args):
                 else:
                     online_target = np.concatenate((online_target, agent_targets), axis=0) 
 
-            if opt.Data.match_actions:# matching targets with their original action ids
+            if Data_opts.match_actions:# matching targets with their original action ids
                 for target in online_target:
                     target_index = 0
                     for i_frame in frame['frame_labels']:
-                        if (np.abs(i_frame[:4] - target[:4]) < float(opt.Data.action_matching_thresh)).all():
+                        if (np.abs(i_frame[:4] - target[:4]) < float(Data_opts.action_matching_thresh)).all():
                             break
                         
                         target_index += 1
 
                     target_action.append(frame['frame_labels'][:, 6][target_index])
             
-            if opt.Data.match_actions: target_actions.append(target_action)
+            if Data_opts.match_actions: target_actions.append(target_action)
 
             online_targets.append(online_target)
 
         if opt.progress:
             progress.close()
 
-        # if debug, then save a 
-        if opt.debug_frames:
-            pass
+        # if debug, then build and save a video of the tracks for the specified video
+        if Debug_opts.debug_video:
+            if data['video_name'] is Debug_opts.video_name:
+                video_builder.build_track_video(data['video_name'], online_targets)
 
         # if save, pass tracks back into dataloader to save into ann_dict
         if opt.save_tubes:
-            if not opt.Data.match_actions: target_actions = []
-            dataloader[idx] = (online_targets, target_actions)
+            if not Data_opts.match_actions: target_actions = []
+            dataloader.write_tracks(data['video_name'], (online_targets, target_actions))
 
         # if evaluate, evaluate on the ground truth tubes provided by ROAD
-        if opt.Evaluation.evaluate:
+        if Evaluation_opts.evaluate:
             names.append(data['video_name'])
-            accumulators.append(evaluator.eval_video(idx, online_targets))
+            accumulators.append(evaluator.eval_video(data['video_name'], online_targets))
 
-    if opt.Evaluation.evaluate: # summarize evaluation, perhaps write it too if needed
+    if Evaluation_opts.evaluate: # summarize evaluation, perhaps write it too if needed
         summary = evaluator.get_summary(accumulators, names)
         print(summary)
     

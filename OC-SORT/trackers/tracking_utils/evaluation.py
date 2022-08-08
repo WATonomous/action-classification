@@ -78,7 +78,7 @@ class ROADMOTEvaluator(object):
             events = None
         return events
 
-    def eval_video(self, idx, video):
+    def eval_video(self, gt_key, video):
         """ video coming in is 
                 np.array([
                         array([[x1, y1, x2, y2, tube_uid, agent_id], ...]), 
@@ -88,18 +88,16 @@ class ROADMOTEvaluator(object):
         """
         self.reset_accumulator()
 
-        print(idx)
-        gt_key = list(self.eval_dict.keys())[idx] # ground truth
-        gt_video = self.eval_dict[gt_key]
+        gt_video = self.eval_dict[gt_key] # ground truth annotations
 
-        for idx, frame in enumerate(video):
+        for i, frame in enumerate(video):
             frame[:, :4] = xyxy2xywh(frame[:, :4]) # [[x, y, w, h, tube_id, agent_id], ...]
 
             trk_xywhs = frame[:, :4]
             trk_ids = frame[:, 4]
 
-            gt_xywhs = gt_video['frames'][idx]['frame_labels'][:, :4]
-            gt_ids = gt_video['frames'][idx]['frame_labels'][:, 4]
+            gt_xywhs = gt_video['frames'][i]['frame_labels'][:, :4]
+            gt_ids = gt_video['frames'][i]['frame_labels'][:, 4]
 
             self.eval_frame(trk_xywhs, trk_ids, gt_xywhs, gt_ids, rtn_events=False)
 

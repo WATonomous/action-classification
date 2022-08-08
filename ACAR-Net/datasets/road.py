@@ -130,7 +130,7 @@ class ROAD(data.Dataset):
 
             for frame in ann_dict['db'][video]['frames'].values():
                 # any frame that contains annotations is a training/val point
-                if not frame['annotated'] or len(frame['annos']) == 0:
+                if len(frame['annos']) == 0:
                     continue
 
                 # Let's use this frame as a training/val point
@@ -147,7 +147,7 @@ class ROAD(data.Dataset):
                 n_frames = clip_end_frame - clip_start_frame + 1
 
                 # then we gather all label information in this frame.
-                assert len(frame['annos']) > 0, frame['annotated']
+                assert len(frame['annos']) > 0
                 labels = []
                 for annon in frame['annos'].values():
                     for action_id in annon['action_ids']:
@@ -171,9 +171,13 @@ class ROAD(data.Dataset):
                 })
 
         # track and print data distribution for potential debugging purposes
-        print("Data Distribution by action class:")
+        print("Data Distribution by Action Class:")
         for k, v in self.action_counts.items():
-            print(ann_dict['all_action_labels'][k], v)
+            try:
+                print(ann_dict['all_action_labels'][k], v)
+            except KeyError:
+                print("Distribution not Available")
+                break
 
     def detection_bbox_to_ava(self, bbox):
         x1, y1, x2, y2 = bbox

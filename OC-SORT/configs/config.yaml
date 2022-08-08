@@ -1,6 +1,5 @@
 progress: True # track progress
-save_tubes: True # generated tubes are saved in a separate annotation file in the same directory as the original, we append '_ocsort' to the annotation name
-debug_frames: False # this will save ten frames of tracks to the same directory as main.py
+save_tubes: False # generated tubes are saved in a separate annotation file in the same directory as the original, we append '_ocsort' to the annotation name
 
 Evaluation:
   evaluate: True # do you want to compare generated tubes to the tubes labeled by ROAD?
@@ -8,18 +7,20 @@ Evaluation:
 
 Data: 
   # This is for Detections coming out of the detector
-  annotation_path: /road/road_trainval_v1.0.json
-  ground_truth: True
-  match_actions: True
+  annotation_path: /road/val1_detections_inactive_merged_gt_format_score_0.1_new.jsonl
+  ground_truth: False
+  match_actions: False
+  give_video_names: True 
 
   # annotation_path: /road/road_trainval_v1.0.json # path to the annotation file
   # ground_truth: True # are these annotations the ROAD ground truth annotations
   # match_actions: True # if ground truth data is given, should we also save the actions
+  # give_video_names: True # main.py will display a list of possible video names to build debug video on
   
   action_matching_thresh: 1e-5 # matching threshold for matching a track with their action
 
 OCSORT: # OCSORT parameters
-  det_thresh: 0.5 # threshold for first round matching, detections for second matching are self.det_thresh > score > 0.1
+  det_thresh: 0.8 # threshold for first round matching, detections for second matching are self.det_thresh > score > 0.1
   max_age: 30 # max number of frames in which an object can be gone until that track is considered dead
   min_hits: 3 # minimum number of times a detection must be hit until a track is formed (~vague, should look into)
   iou_threshold: 0.3 # IOU between detection candidates and tracked detection for second round matching
@@ -37,5 +38,16 @@ OCSORT: # OCSORT parameters
   asso_func: "iou" 
   
   use_byte: False # use BYTE tracker as second of association by OCR
+
+Debug:
+  debug_video: False # debug tracks by saving a video of it
+  video_name: '' # what video's tracks should we debug on? Must exist in annotation path, can show list in Data.give_video_names
+
+Video_Builder:
+  video_path: '/road/rgb-images' # path to all the video rgb images
+  save_path: './output' # where the debug video should be loaded to
+  bbox_thickness: 2 # pixels thick 
+  
+
 
 

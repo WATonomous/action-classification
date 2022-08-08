@@ -25,8 +25,10 @@ class UIDtoNumber(object):
         self.n_uids = 0
 
     def uid2number(self, uid):
-        if not uid in self.uid_dict:
+        try:
+            return self.uid_dict[uid]
+        except KeyError:
             self.n_uids += 1
             self.uid_dict[uid] = self.n_uids
 
-        return self.uid_dict[uid]
+            return self.uid_dict[uid]

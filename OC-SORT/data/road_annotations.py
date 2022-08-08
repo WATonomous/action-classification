@@ -66,7 +66,7 @@ class ROADOCSORT(data.Dataset):
 
             dp['frame_labels'] = np.empty((0, LABEL_LENGTH))
 
-            if frame['annotated']:
+            if len(frame['annos']) > 0:
                 for annon in frame['annos'].values():
                     # 1 is the confidence score only if annon box is the ground truth,
                     # ocsort is actually built to handle multiple detections of varying confidence
@@ -85,11 +85,11 @@ class ROADOCSORT(data.Dataset):
 
             self.data_dict[video]['frames'].append(dp)
 
-    def __setitem__(self, index, input):
+    def write_tracks(self, video_key, input):
         ''' Sets video with new labels and tube tracks for each frame. 
             
             Args:
-                index: index of video (same as __getitem__)
+                name: name of video 
                 input: a tuple of online_targets and target_actions
         '''
         online_targets, target_actions = input
@@ -102,39 +102,35 @@ class ROADOCSORT(data.Dataset):
                 - frame['rgb_image_id']
                 where frame is in ann_dict['db'][video_key]['frames']
             ''' 
-            video_key = list(self.data_dict.keys())[index]
-
             for idx, online_target in enumerate(online_targets):
-                if not self.ground_truth and idx == 0: # this because adding optical flow removes the first frame
-                    continue
-
+                # Deletes the annos key-value pair to free up space for the track detections
+                self.ann_dict['db'][video_key]['frames'][str(idx+1)]['annotated'] = 1
+                
                 if 'annos' in self.ann_dict['db'][video_key]['frames'][str(idx + 1)]:
                     del self.ann_dict['db'][video_key]['frames'][str(idx + 1)]['annos']
 
-                if len(online_target) != 0:
-                    self.ann_dict['db'][video_key]['frames'][str(idx + 1)]['annotated'] = 1
-                    # convert list of annotations to a dictionary of them, save into ann_dict
-                    self.ann_dict['db'][video_key]['frames'][str(idx + 1)]['annos'] = {}
-                    
-                    if self.match_actions:
-                        target_action = target_actions[idx]
-                    else:
-                        target_action = [1 for _ in online_target] # set to 1 as a fake ID for ACAR's calc_mAP, this design should change...
-
-                    for target, action in zip(online_target, target_action):
-                        bbox_name = f"b{self.bbox_counter:06}"
-                        # by replacing annos, we are removing loc_ids, action_ids, duplex_ids, triplet_ids
-                        # these are unused annotations 
-                        anno = {}
-                        anno['box'] = list(target[:4])
-                        anno['tube_uid'] = target[4]
-                        anno['agent_ids'] = target[5]
-                        anno['action_ids'] = action
-                        self.ann_dict['db'][video_key]['frames'][str(idx + 1)]['annos'][bbox_name] = anno
-                        self.bbox_counter += 1
-
+                # convert list of annotations to a dictionary of them, save into ann_dict
+                self.ann_dict['db'][video_key]['frames'][str(idx + 1)]['annos'] = {}
+                
+                if self.match_actions:
+                    target_action = target_actions[idx]
                 else:
-                    self.ann_dict['db'][video_key]['frames'][str(idx + 1)]['annotated'] = 0
+                    target_action = [[1] for _ in online_target] # set to 1 as a fake ID for ACAR's calc_mAP, this design should change...
+
+                for target, action in zip(online_target, target_action):
+                    bbox_name = f"b{self.bbox_counter:06}"
+                    # by replacing annos, we are removing loc_ids, action_ids, duplex_ids, triplet_ids
+                    # these are unused annotations 
+                    anno = {}
+                    anno['box'] = list(target[:4])
+                    anno['tube_uid'] = target[4]
+                    anno['agent_ids'] = target[5]
+                    anno['action_ids'] = action
+                    self.ann_dict['db'][video_key]['frames'][str(idx + 1)]['annos'][bbox_name] = anno
+                    self.bbox_counter += 1
+
+    def get_video_names(self):
+        return list(self.ann_dict['db'].keys())
 
     def __getitem__(self, index): 
         ''' Returns:
