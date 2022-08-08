@@ -32,10 +32,8 @@ def main(args):
 
     # load data
     dataloader = ROADOCSORT(
-        annotation_path=Data_opts.annotation_path, 
-        save_tubes=opt.save_tubes,
-        ground_truth=Data_opts.ground_truth,
-        match_actions=Data_opts.match_actions
+        opts=Data_opts, 
+        save_tubes=opt.save_tubes
     )
 
     if Data_opts.give_video_names == True:

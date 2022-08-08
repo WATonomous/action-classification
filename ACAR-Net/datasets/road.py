@@ -130,7 +130,7 @@ class ROAD(data.Dataset):
 
             for frame in ann_dict['db'][video]['frames'].values():
                 # any frame that contains annotations is a training/val point
-                if len(frame['annos']) == 0:
+                if not frame['annotated'] or len(frame['annos']) == 0:
                     continue
 
                 # Let's use this frame as a training/val point
@@ -147,7 +147,7 @@ class ROAD(data.Dataset):
                 n_frames = clip_end_frame - clip_start_frame + 1
 
                 # then we gather all label information in this frame.
-                assert len(frame['annos']) > 0
+                assert len(frame['annos']) > 0, frame['annotated']
                 labels = []
                 for annon in frame['annos'].values():
                     for action_id in annon['action_ids']:

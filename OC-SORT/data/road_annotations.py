@@ -7,7 +7,7 @@ import torch.utils.data as data
 LABEL_LENGTH = 7 # dp['frame_labels'] is [[x1, y1, x2, y2, score, agent, action_ids], ...]
 
 class ROADOCSORT(data.Dataset):
-    def __init__(self, annotation_path, save_tubes, ground_truth, match_actions):
+    def __init__(self, opts, save_tubes):
         ''' ROAD Dataset class:
         Reads ROAD annotations and provides the minimum compatible with OC_SORT and the
         evaluation of it. Saves produced tubes into new json annotation file
@@ -15,6 +15,8 @@ class ROADOCSORT(data.Dataset):
 
         Args:
             annotation_path: path to the annotations
+            ground_truth: is the annotation path the ground truth?
+            ground_truth_path: path to the ground truth
             class_idx_path: path to the class indexes
             save_tubes: instructs the class to initialize a copy of the annotations file and save new tube_uids to it
         
@@ -23,20 +25,25 @@ class ROADOCSORT(data.Dataset):
         '''
         self.data_dict = {} # data dictionary for videos and each of their frames, this is the minimum we need to pass
         self.bbox_counter = 0 # used when saving tubes, counts total bboxes saved
-        self.ground_truth = ground_truth
-        self.match_actions = match_actions
+        self.ground_truth = opts.ground_truth
+        self.match_actions = opts.match_actions
 
-        with open(annotation_path, "r") as f:
+        with open(opts.annotation_path, "r") as f:
             fs = f.read()
             self.ann_dict = json.loads(fs) # annotation dictionary
 
             for video in self.ann_dict['db'].keys():
                 self.append_new_data(video)     
 
+        if not self.ground_truth:
+            with open(opts.ground_truth_path, "r") as f:
+                fs = f.read()
+                self.gt_dict = json.loads(fs) # ground_truth dictionary
+
         if save_tubes:
             # get the name of the annotation file 
-            anno_name = os.path.splitext(annotation_path)[0] 
-            self.new_annotation_path = os.path.join(annotation_path, '..', anno_name + '_ocsort.json')
+            anno_name = os.path.splitext(opts.annotation_path)[0] 
+            self.new_annotation_path = os.path.join(opts.annotation_path, '..', anno_name + '_ocsort.json')
 
             # writer for the new anno dict file 
             self.w = open(self.new_annotation_path, "w")
@@ -104,7 +111,11 @@ class ROADOCSORT(data.Dataset):
             ''' 
             for idx, online_target in enumerate(online_targets):
                 # Deletes the annos key-value pair to free up space for the track detections
-                self.ann_dict['db'][video_key]['frames'][str(idx+1)]['annotated'] = 1
+                self.ann_dict['db'][video_key]['frames'][str(idx+1)]['annotated'] = \
+                    self.gt_dict['db'][video_key]['frames'][str(idx+1)]['annotated']
+
+                if not self.ann_dict['db'][video_key]['frames'][str(idx+1)]['annotated']:
+                    continue
                 
                 if 'annos' in self.ann_dict['db'][video_key]['frames'][str(idx + 1)]:
                     del self.ann_dict['db'][video_key]['frames'][str(idx + 1)]['annos']
