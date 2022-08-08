@@ -1,6 +1,7 @@
 import os
 import cv2
-from road_video_utils import generate_random_colour
+from tqdm import tqdm
+from data.road_video_utils import generate_random_colour
 
 class ROADDebugVideo(object):
     def __init__ (self, opts):
@@ -17,6 +18,9 @@ class ROADDebugVideo(object):
         self.img_arr = [] # array of images which will build the video
         self.track_colours = {} # dictionary of track colours
         self.bbox_thickness = opts.bbox_thickness 
+        self.font_scale = opts.font_scale
+        self.font_thickness = opts.font_thickness
+        self.title_location = opts.title_location
 
     def build_track_video(self, video_name, tracked_clip_annos):
         ''' Build Track video:
@@ -34,9 +38,15 @@ class ROADDebugVideo(object):
         # if specified video not in the possible video names, raise assertion
         assert video_name in self.video_names
 
+        print(f'Video Builder Enabled: Building track video for {video_name}:')
+        progress = tqdm(total=len(tracked_clip_annos), ncols=25)
+
         for idx, tracked_frame_annos in enumerate(tracked_clip_annos):
+            # progress
+            progress.update()
+
             # path to the specific frame in the video
-            frame_path = os.path.join(self.video_path, video_name, f'{idx:05}.jpg')
+            frame_path = os.path.join(self.video_path, video_name, f'{idx + 1:05}.jpg')
 
             try:
                 img = cv2.imread(frame_path)
@@ -49,10 +59,10 @@ class ROADDebugVideo(object):
             for anno in tracked_frame_annos:
                 # get box
                 xyxy = anno[:4] # [x1, y1, x2, y2] where x1y1=top-left, x2y2=bottom-right
-                x1 = xyxy[0] * w
-                x2 = xyxy[2] * w
-                y1 = xyxy[1] * h
-                y2 = xyxy[3] * h
+                x1 = int(xyxy[0] * w)
+                x2 = int(xyxy[2] * w)
+                y1 = int(xyxy[1] * h)
+                y2 = int(xyxy[3] * h)
 
                 # get colour
                 try:
@@ -63,19 +73,18 @@ class ROADDebugVideo(object):
 
                 # misc opencv params
                 font = cv2.FONT_HERSHEY_TRIPLEX
-                font_scale = 1
 
                 cv2.rectangle(img, (x1, y1), (x2, y2), colour, self.bbox_thickness)
-                cv2.putText(img, f'tube_id: {anno[4]}', (x2 + 10, y2), 
-                            font, font_scale, colour, self.bbox_thickness, cv2.LINE_AA)
+                cv2.putText(img, f'tube_id: {int(anno[4])}', (x1 + self.title_location[0], y1 + self.title_location[1]), 
+                            font, self.font_scale, colour, self.font_thickness, cv2.LINE_AA)
                 
             self.img_arr.append(img)
 
         return self.save_track_video(video_name, h, w)      
 
     def save_track_video(self, video_name, h, w):
-        out_path = os.path.join(self.save_path, video_name + '_debug.mp4')
-        out = cv2.VideoWriter(out_path, cv2.VideoWriter_fourcc(*'MP4V'), 15, (h, w))
+        out_path = os.path.join(self.save_path, video_name + '_debug.avi')
+        out = cv2.VideoWriter(out_path, cv2.VideoWriter_fourcc(*'MJPG'), 15, (w, h))
 
         for i in range(len(self.img_arr)):
             out.write(self.img_arr[i])

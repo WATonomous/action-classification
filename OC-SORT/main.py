@@ -121,7 +121,7 @@ def main(args):
 
         # if debug, then build and save a video of the tracks for the specified video
         if Debug_opts.debug_video:
-            if data['video_name'] is Debug_opts.video_name:
+            if data['video_name'] == Debug_opts.video_name:
                 video_builder.build_track_video(data['video_name'], online_targets)
 
         # if save, pass tracks back into dataloader to save into ann_dict

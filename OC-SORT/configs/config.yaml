@@ -10,7 +10,7 @@ Data:
   annotation_path: /road/val1_detections_inactive_merged_gt_format_score_0.1_new.jsonl
   ground_truth: False
   match_actions: False
-  give_video_names: True 
+  give_video_names: False 
 
   # annotation_path: /road/road_trainval_v1.0.json # path to the annotation file
   # ground_truth: True # are these annotations the ROAD ground truth annotations
@@ -40,14 +40,25 @@ OCSORT: # OCSORT parameters
   use_byte: False # use BYTE tracker as second of association by OCR
 
 Debug:
-  debug_video: False # debug tracks by saving a video of it
-  video_name: '' # what video's tracks should we debug on? Must exist in annotation path, can show list in Data.give_video_names
+  debug_video: True # debug tracks by saving a video of it
+  video_name: '2014-06-26-09-53-12_stereo_centre_02' # what video's tracks should we debug on? Must exist in annotation path, can show list in Data.give_video_names
 
 Video_Builder:
   video_path: '/road/rgb-images' # path to all the video rgb images
-  save_path: './output' # where the debug video should be loaded to
+  save_path: '/project/OC-SORT/output' # where the debug video should be loaded to
   bbox_thickness: 2 # pixels thick 
-  
 
+  # Title Location: based on the following xy plane
+  # o----------------------> X
+  # |     Title(x1 + title_location[0], y1 + title_location[1]) 
+  # |     o----------o
+  # |     | (x1, y1) |
+  # |     |          |
+  # |     o----------o (x2, y2)
+  # |
+  # v    
+  # Y
 
-
+  title_location: [0, -10] # pixels from x1, y1
+  font_scale: 0.5
+  font_thickness: 1
