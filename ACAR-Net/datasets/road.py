@@ -108,16 +108,16 @@ class ROAD(data.Dataset):
         self.num_frames_in_clip = 91
         self.split = split
 
-        with open(annotation_path, "r") as f:
-            fs = f.read()
-            ann_dict = json.loads(fs)
-            self.load_data_split(ann_dict)
-
         with open(class_idx_path, "r") as f:
             items = json.load(f).items()
             self.idx_to_class = sorted(items, key=lambda x: x[1])
             self.idx_to_class = list(
                 map(lambda x: {'name': x[0], 'id': x[1]}, self.idx_to_class))
+
+        with open(annotation_path, "r") as f:
+            fs = f.read()
+            ann_dict = json.loads(fs)
+            self.load_data_split(ann_dict)
 
         self.root_path = root_path
         self.spatial_transform = spatial_transform
@@ -151,8 +151,17 @@ class ROAD(data.Dataset):
                 for annon in frame['annos'].values():
                     for action_id in annon['action_ids']:
                         self.action_counts[action_id] += 1
+                    if 'tube_uid' not in annon:
+                        # when testing on our own object detector (non ground truth
+                        # without an object tracker), we don't have tube_uid, so we infill 
+                        # it with the frame id. the effect of this downstream is that no clip frame
+                        # other than the midframe will have labels. This is fine as long as
+                        # we are using default acar, which only selects the midframe anyways.
+                        tube_uid = f"{frame_id}_{action_id}_{self.action_counts[action_id]}"
+                    else:
+                        tube_uid = annon['tube_uid']
                     labels.append({
-                        'tube_uid': annon['tube_uid'],
+                        'tube_uid': tube_uid,
                         'bounding_box': annon['box'],
                         'label': annon['action_ids']})
 
@@ -173,7 +182,10 @@ class ROAD(data.Dataset):
         # track and print data distribution for potential debugging purposes
         print("Data Distribution by action class:")
         for k, v in self.action_counts.items():
-            print(ann_dict['all_action_labels'][k], v)
+            print(self.idx_to_class[k], v)
+
+        print("valid tube indices:", len(self.valid_tube_indices))
+        print("total datapoints:", len(self.data))
 
     def _spatial_transform(self, clip):
         if self.spatial_transform is not None:
