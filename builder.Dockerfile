@@ -1,4 +1,4 @@
-FROM pure/python:3.8-cuda10.2-base
+FROM pure/python:3.8
 WORKDIR /project
 
 # cv2 dependencies
@@ -10,12 +10,13 @@ RUN pip install \
 	numpy \
 	simplejson \
 	PyYAML \
+    easydict \
 	psutil \
 	opencv-python \
 	matplotlib \
 	termcolor \
 	Pillow \
-        av \
+    av \
 	ffmpeg \
 	moviepy \
 	tqdm>=4.29.0 

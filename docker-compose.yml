@@ -31,7 +31,7 @@ services:
 
   builder:
     build:
-      contect: .
+      context: .
       dockerfile: builder.Dockerfile
     image: git.uwaterloo.ca:5050/watonomous/registry/action-classification/video-builder
     volumes:
@@ -39,4 +39,3 @@ services:
       - ./Video-Builder:/project/Video-Builder
     ipc: host
     tty: true
-

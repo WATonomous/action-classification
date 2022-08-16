@@ -1,0 +1,37 @@
+list_videos: True # lists the available videos to build annotations on
+video_name: '2015-02-13-09-16-26_stereo_centre_02' # name of the video to build annotations on
+
+Detector:
+  # path to the detection annotations
+  detections_path: '/road/flow_color_model_fpn_x101_64x4d_finetune_val1_detections_inactive_merged_gt_format_0.1_new.json'
+
+Tracker:
+  # path to annotations with tracks in them
+  tracks_path: '/road/flow_color_model_fpn_x101_64x4d_finetune_val1_detections_inactive_merged_gt_format_0.1_new_ocsort.json'
+
+Action_Classifier:
+  # path to annotations with actions in them
+  actions_path:
+
+Video_Builder:
+  video_path: '/road/rgb-images' # path to all the video rgb images
+  save_path: '/project/Video-Builder/output' # where the debug video should be loaded to
+
+Video_Formatting:
+  # Misc Cv2 params for bbox layout
+  bbox_thickness: 2 # pixels thick 
+
+  # Title Location: based on the following xy plane
+  # o----------------------> X
+  # |     Title(x1 + title_location[0], y1 + title_location[1]) 
+  # |     o----------o
+  # |     | (x1, y1) |
+  # |     |          |
+  # |     o----------o (x2, y2)
+  # |
+  # v    
+  # Y
+
+  title_location: [0, -10] # pixels from x1, y1
+  font_anno_scale: 0.5
+  font_thickness: 1

@@ -1,4 +1,3 @@
-from __future__ import annotations
 import argparse
 import yaml
 import numpy as np
@@ -22,7 +21,6 @@ def main(args):
 
     Data_opts = opt.Data
     Evaluation_opts = opt.Evaluation 
-    Debug_opts = opt.Debug
 
     # load data
     dataloader = ROADOCSORT(
