@@ -6,11 +6,8 @@ from tqdm import tqdm
 
 from easydict import EasyDict
 from data.road_annotations import ROADOCSORT
-from data.road_video import ROADDebugVideo
 from trackers.ocsort_tracker.ocsort import OCSort
 from trackers.tracking_utils.evaluation import ROADMOTEvaluator
-
-ACTION_MATCHING_THRESH = 1e-5
 
 def main(args):
     """ TUBE GENERATOR
@@ -26,9 +23,6 @@ def main(args):
     Data_opts = opt.Data
     Evaluation_opts = opt.Evaluation 
     Debug_opts = opt.Debug
-
-    if Debug_opts.debug_video:
-        video_builder = ROADDebugVideo(opt.Video_Builder)
 
     # load data
     dataloader = ROADOCSORT(
@@ -116,11 +110,6 @@ def main(args):
 
         if opt.progress:
             progress.close()
-
-        # if debug, then build and save a video of the tracks for the specified video
-        if Debug_opts.debug_video:
-            if data['video_name'] == Debug_opts.video_name:
-                video_builder.build_track_video(data['video_name'], online_targets)
 
         # if save, pass tracks back into dataloader to save into ann_dict
         if opt.save_tubes:

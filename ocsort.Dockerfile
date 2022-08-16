@@ -1,11 +1,6 @@
 FROM pure/python:3.8-cuda10.2-base
 WORKDIR /project
 
-# cv2 dependencies
-RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys A4B469963BF863CC
-RUN apt-get update
-RUN apt-get install ffmpeg libsm6 libxext6  -y
-
 ENV VIRTUAL_ENV=/opt/venv
 RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
@@ -16,7 +11,6 @@ RUN pip install \
 	PyYAML \
 	psutil \
 	opencv-python \
-	tensorboard \
 	yacs>=0.1.6 \
 	matplotlib \
 	termcolor \
@@ -33,14 +27,4 @@ RUN pip install \
 
 # separate because it doesn't wanna be part of his friends (module 'numpy' not found error)
 RUN pip install lap 
-
-# RUN pip install --pre 'torch==1.10.0.dev20210921+cu111' -f https://download.pytorch.org/whl/nightly/cu111/torch_nightly.html
-# RUN pip install torch==1.10.0+cu111 -f https://download.pytorch.org/whl/cu111/torch_stable.html
-# RUN pip install pytorchvideo
-RUN pip install torch pytorchvideo torchvision
-# RUN pip install --pre 'torchvision==0.11.0.dev2021092+cu111' -f https://download.pytorch.org/whl/nightly/cu111/torch_nightly.html
-# RUN pip install torchvision==0.11.0+cu111 -f https://download.pytorch.org/whl/cu111/torch_stable.html
-RUN pip install torch==1.10.0+cu111 torchvision==0.11.0+cu111 pytorchvideo -f https://download.pytorch.org/whl/cu111/torch_stable.html
-
-RUN pip install easydict tensorboardx
 

@@ -105,7 +105,7 @@ train:
 
 val:
     root_path: /road/rgb-images
-    annotation_path: /road/val1_detections_inactive_merged_gt_format_score_0.1_new_ocsort.json
+    annotation_path: /road/flow_color_model_fpn_x101_64x4d_finetune_val1_detections_inactive_merged_gt_format_0.1_new_ocsort.json
     class_idx_path: /road/class_name_gen_1.json
     # Maxes all ram and about half of GPUs on thor
     # batch_size: 24

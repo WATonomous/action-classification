@@ -29,3 +29,14 @@ services:
     ipc: host
     tty: true
 
+  builder:
+    build:
+      contect: .
+      dockerfile: builder.Dockerfile
+    image: git.uwaterloo.ca:5050/watonomous/registry/action-classification/video-builder
+    volumes:
+      - /mnt/wato-drive/road:/road
+      - ./Video-Builder:/project/Video-Builder
+    ipc: host
+    tty: true
+
