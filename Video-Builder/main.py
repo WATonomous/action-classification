@@ -14,8 +14,6 @@ def main(args):
 
     video_builder = ROADDebugVideo(opts)
 
-    pass
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='OCSORT Tube Generation and Eval')
     parser.add_argument('--config', type=str, required=True)

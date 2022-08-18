@@ -129,6 +129,7 @@ class ROADOCSORT(data.Dataset):
                     target_action = [[1] for _ in online_target] # set to 1 as a fake ID for ACAR's calc_mAP, this design should change...
 
                 for target, action in zip(online_target, target_action):
+                    self.bbox_counter += 1
                     bbox_name = f"b{self.bbox_counter:06}"
                     # by replacing annos, we are removing loc_ids, action_ids, duplex_ids, triplet_ids
                     # these are unused annotations 
@@ -138,7 +139,6 @@ class ROADOCSORT(data.Dataset):
                     anno['agent_ids'] = target[5]
                     anno['action_ids'] = action
                     self.ann_dict['db'][video_key]['frames'][str(idx + 1)]['annos'][bbox_name] = anno
-                    self.bbox_counter += 1
 
     def get_video_names(self):
         return list(self.ann_dict['db'].keys())

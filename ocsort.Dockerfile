@@ -28,3 +28,5 @@ RUN pip install \
 # separate because it doesn't wanna be part of his friends (module 'numpy' not found error)
 RUN pip install lap 
 
+WORKDIR /project/OC-SORT
+

@@ -20,3 +20,5 @@ RUN pip install \
 	ffmpeg \
 	moviepy \
 	tqdm>=4.29.0 
+
+WORKDIR /project/Video-Builder

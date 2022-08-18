@@ -19,7 +19,7 @@ class TubeNeck(nn.Module):
         self.multi_class = multi_class
 
     # data: aug_info, labels, filenames, mid_times
-    # returns: num_rois, rois, roi_ids, targets, sizes_before_padding, filenames, mid_times, bboxes, bbox_ids
+    # returns: num_rois, rois, roi_ids, targets, sizes_before_padding, filenames, mid_times, bboxes, bbox_idxs
     def forward(self, data):
         """Gathers rois for all the keyframes (elements in the batch) and their target
         labels.
@@ -52,10 +52,12 @@ class TubeNeck(nn.Module):
              'filenames': filenames for each example, 
              'mid_times': mid_times for each example, 
              'bboxes': bounding boxes unique within the batch, 
-             'bbox_ids': bounding box ids unique within the batch}
+             'bbox_idxs': bounding box idxs unique within the batch, 
+             'bbox_ids': bounding box ids as stated in json anno file}
         """
         roi_ids, targets, sizes_before_padding, filenames, mid_times = [0], [], [], [], []
-        bboxes, bbox_ids = [], []  # used for multi-crop fusion
+        bbox_ids = [] # used to associate actions to each of the bounding boxes in the key frame
+        bboxes, bbox_idxs = [], []  # used for multi-crop fusion
         rois = None
         # this map stores the order in which we see the labels in the keyframe
         # so that it can be used as the index at which corresponding tube rois
@@ -77,7 +79,8 @@ class TubeNeck(nn.Module):
                 filenames.append(data['filenames'][idx])
                 mid_times.append(data['mid_times'][idx])
                 bboxes.append(label['bounding_box'])
-                bbox_ids.append(cur_bbox_id)
+                bbox_ids.append(label['bbox_id'])
+                bbox_idxs.append(cur_bbox_id)
     
                 if self.multi_class:
                     # constructing the target tensor
@@ -135,12 +138,14 @@ class TubeNeck(nn.Module):
         if num_rois == 0:
             return {'num_rois': 0, 'rois': None, 'roi_ids': roi_ids, 'targets': None, 
                     'sizes_before_padding': sizes_before_padding,
-                    'filenames': filenames, 'mid_times': mid_times, 'bboxes': bboxes, 'bbox_ids': bbox_ids}
+                    'filenames': filenames, 'mid_times': mid_times, 'bboxes': bboxes, 'bbox_idxs': bbox_idxs, 
+                    'bbox_ids': bbox_ids}
         
         targets = torch.stack(targets, dim=0).cuda()
         return {'num_rois': num_rois, 'rois': rois.cuda(), 'roi_ids': roi_ids, 'targets': targets, 
                 'sizes_before_padding': sizes_before_padding,
-                'filenames': filenames, 'mid_times': mid_times, 'bboxes': bboxes, 'bbox_ids': bbox_ids}
+                'filenames': filenames, 'mid_times': mid_times, 'bboxes': bboxes, 'bbox_idxs': bbox_idxs, 
+                'bbox_ids': bbox_ids}
     
 def tube(**kwargs):
     model = TubeNeck(**kwargs)
