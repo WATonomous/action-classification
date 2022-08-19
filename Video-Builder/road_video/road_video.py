@@ -95,8 +95,14 @@ class ROADDebugVideo(object):
             progress.update()
             idx = img_idx + 1
 
+            ''' IMPORTANT: This line is to crop out the first few frames that do not contain action detections.
+                It also helps with the offset due to optical flow
+                This may need to change in the future
+            '''
+            if idx <= 50 or idx >= 5950: continue # this is due to the use of optical flow and tube acar
+
             # path to the specific frame in the video
-            frame_path = os.path.join(self.video_path, video_name, f'{idx + 1:05}.jpg')
+            frame_path = os.path.join(self.video_path, video_name, f'{idx - 1:05}.jpg')
 
             try:
                 img = cv2.imread(frame_path)
