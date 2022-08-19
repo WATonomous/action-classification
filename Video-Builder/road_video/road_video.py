@@ -26,11 +26,6 @@ class ROADDebugVideo(object):
             for name in self.video_names:
                 print(name)
 
-        # array of images which will build the video
-        self.video_arr = [] 
-        self.video_h = 0
-        self.video_w = 0
-
         self.build_video(self.video_name)
     
     def load_main_opts(self, opts):
@@ -46,27 +41,29 @@ class ROADDebugVideo(object):
         self.video_formatting_opts = opts.Video_Formatting
 
         # Load dictionaries and readers for all the available annotations
+        self.num_streams = 0
         if opts.Detector.detections_path is not None: # detections 
+            self.num_streams += 1
             with open(opts.Detector.detections_path, "r") as f:
                 fs = f.read()
                 self.det_dict = json.loads(fs) # detections dictionary
                 self.detection_colours = {} # dictionary for detection colours, coloured by agent class         
     
         if opts.Tracker.tracks_path is not None: # tracks
+            self.num_streams += 1
             self.track_opts = opts.Tracker
             with open(self.track_opts.tracks_path, "r") as f:
                 fs = f.read()
                 self.track_dict = json.loads(fs) # tracks dictionary
-                self.track_colours = {} # dictionary for track colours, coloured by track id
+                self.track_colours = {} # dictionary for track colours, coloured by track id 
         
         if opts.Action_Classifier.actions_path is not None: # actions
+            self.num_streams += 1
             self.action_opts = opts.Action_Classifier
             with open(opts.Action_Classifier.actions_path, "r") as f:
-                self.action_dict = json.load(f) # actions csv reader     
+                fs = f.read()
+                self.action_dict = json.loads(fs) # actions csv reader     
                 self.action_colours = {} # dictionary for action colours, coloured by action class
-
-    # TODO the builder needs to change, create a util function that creates titles accordingly, and also add boxes to an image
-    # provided we give the proper formatting
 
     def build_video(self, video_name):
         ''' Build Track video:
@@ -80,22 +77,29 @@ class ROADDebugVideo(object):
         assert video_name in self.video_names
 
         print(f'Video Builder Enabled: Building video for {video_name}:')
-        video_length = len(os.listdir(os.path.join(self.video_path, video_name))) 
-        progress = tqdm(total=video_length, ncols=25)
+        video_length = len(os.listdir(os.path.join(self.video_path, video_name))) - 1
 
-        for img_idx in list(range(video_length - 1)):
+        # initialize progress
+        progress = tqdm(total=video_length + 1, ncols=25)
+        progress.update()
+
+        # initialize video writer
+        init_img = cv2.imread(os.path.join(self.video_path, video_name, '00001.jpg'))
+        h, w, _ = init_img.shape
+
+        out_path = os.path.join(self.save_path, video_name + '_debug.avi')
+        out = cv2.VideoWriter(out_path, cv2.VideoWriter_fourcc(*'MJPG'), 15, (w * self.num_streams, h))
+
+        # build video frame by frame
+        for img_idx in list(range(video_length)):
             progress.update()
             idx = img_idx + 1
-
-            if idx == 5803:
-                print("hi")
 
             # path to the specific frame in the video
             frame_path = os.path.join(self.video_path, video_name, f'{idx + 1:05}.jpg')
 
             try:
                 img = cv2.imread(frame_path)
-                h, w, _ = img.shape
             except BaseException as e:
                 raise RuntimeError(
                     'Caught "{}" when loading {}'.format(str(e), frame_path)
@@ -112,37 +116,37 @@ class ROADDebugVideo(object):
                                     self.detection_colours, 
                                     self.video_formatting_opts) # builds detection frame
                 ) 
+
+                del self.det_dict['db'][video_name]['frames'][str(idx)]
                 
             if hasattr(self, 'track_dict'):
-                img_track = copy.deepcopy(img)
                 frame_streams.append(
                     build_track_frame(idx,
-                                    img_track, 
+                                    img, 
                                     self.track_dict['db'][video_name], 
                                     self.track_colours, 
                                     self.video_formatting_opts, 
                                     self.track_opts) # builds track frame
                 )
+
+                del self.track_dict['db'][video_name]['frames'][str(idx)]
                 
             if hasattr(self, 'action_dict'):
-                img_action = copy.deepcopy(img)
                 frame_streams.append(
                     build_action_frame(idx, 
-                                    img_action, 
+                                    img, 
                                     self.action_dict['db'][video_name], 
                                     self.action_colours, 
                                     self.video_formatting_opts,
                                     self.action_opts) # builds action frame
                 )
 
-            if img_idx == 0:
-                num_streams = len(frame_streams)
-                self.video_w = w * num_streams
-                self.video_h = h
+                del self.action_dict['db'][video_name]['frames'][str(idx)]
 
-            self.video_arr.append(self.combine_frame_streams(frame_streams))
+            out.write(self.combine_frame_streams(frame_streams))
 
-        return self.save_track_video(video_name, self.video_h, self.video_w)  
+        out.release()
+        return  
 
     def combine_frame_streams(self, frame_streams): # separate function in case a more sophisticated concat of streams is needed
         combined_frame = frame_streams[0]
@@ -152,14 +156,3 @@ class ROADDebugVideo(object):
             combined_frame = np.concatenate((combined_frame, frame), axis=1)
 
         return combined_frame
-
-    def save_track_video(self, video_name, h, w):
-        out_path = os.path.join(self.save_path, video_name + '_debug.avi')
-        out = cv2.VideoWriter(out_path, cv2.VideoWriter_fourcc(*'MJPG'), 15, (w, h))
-
-        for i in range(len(self.video_arr)):
-            out.write(self.video_arr[i])
-
-        out.release()
-
-        return True
