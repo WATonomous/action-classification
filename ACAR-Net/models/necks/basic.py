@@ -24,6 +24,7 @@ class BasicNeck(nn.Module):
         rois, roi_ids, targets, sizes_before_padding, filenames, mid_times = [], [0], [], [], [], []
         bbox_ids = [] # used for associating actions to the bbox in the json annotation file
         bboxes, bbox_idxs = [], []  # used for multi-crop fusion
+        tube_uids = [] # used for postprocessing
 
         cur_bbox_idx = -1  # record current bbox no.
         for idx in range(len(data['aug_info'])):
@@ -51,6 +52,7 @@ class BasicNeck(nn.Module):
                     mid_times.append(data['mid_times'][idx])
                     bboxes.append(label['bounding_box'])
                     bbox_ids.append(label['bbox_id'])
+                    tube_uids.append(label['tube_uid'])
                     bbox_idxs.append(cur_bbox_idx)
 
                     if self.multi_class:
@@ -68,14 +70,14 @@ class BasicNeck(nn.Module):
             return {'num_rois': 0, 'rois': None, 'roi_ids': roi_ids, 'targets': None, 
                     'sizes_before_padding': sizes_before_padding,
                     'filenames': filenames, 'mid_times': mid_times, 'bboxes': bboxes, 'bbox_idxs': bbox_idxs, 
-                    'bbox_ids': bbox_ids}
+                    'bbox_ids': bbox_ids, 'tube_uids': tube_uids}
         
         rois = torch.FloatTensor(rois).cuda()
         targets = torch.stack(targets, dim=0).cuda()
         return {'num_rois': num_rois, 'rois': rois, 'roi_ids': roi_ids, 'targets': targets, 
                 'sizes_before_padding': sizes_before_padding,
                 'filenames': filenames, 'mid_times': mid_times, 'bboxes': bboxes, 'bbox_idxs': bbox_idxs, 
-                'bbox_ids': bbox_ids}
+                'bbox_ids': bbox_ids, 'tube_uids': tube_uids}
 
     
 def basic(**kwargs):

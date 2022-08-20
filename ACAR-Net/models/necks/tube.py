@@ -58,6 +58,8 @@ class TubeNeck(nn.Module):
         roi_ids, targets, sizes_before_padding, filenames, mid_times = [0], [], [], [], []
         bbox_ids = [] # used to associate actions to each of the bounding boxes in the key frame
         bboxes, bbox_idxs = [], []  # used for multi-crop fusion
+        tube_uids = [] # used for postprocessing
+
         rois = None
         # this map stores the order in which we see the labels in the keyframe
         # so that it can be used as the index at which corresponding tube rois
@@ -80,6 +82,7 @@ class TubeNeck(nn.Module):
                 mid_times.append(data['mid_times'][idx])
                 bboxes.append(label['bounding_box'])
                 bbox_ids.append(label['bbox_id'])
+                tube_uids.append(label['tube_uid'])
                 bbox_idxs.append(cur_bbox_id)
     
                 if self.multi_class:
@@ -139,13 +142,13 @@ class TubeNeck(nn.Module):
             return {'num_rois': 0, 'rois': None, 'roi_ids': roi_ids, 'targets': None, 
                     'sizes_before_padding': sizes_before_padding,
                     'filenames': filenames, 'mid_times': mid_times, 'bboxes': bboxes, 'bbox_idxs': bbox_idxs, 
-                    'bbox_ids': bbox_ids}
+                    'bbox_ids': bbox_ids, 'tube_uids': tube_uids}
         
         targets = torch.stack(targets, dim=0).cuda()
         return {'num_rois': num_rois, 'rois': rois.cuda(), 'roi_ids': roi_ids, 'targets': targets, 
                 'sizes_before_padding': sizes_before_padding,
                 'filenames': filenames, 'mid_times': mid_times, 'bboxes': bboxes, 'bbox_idxs': bbox_idxs, 
-                'bbox_ids': bbox_ids}
+                'bbox_ids': bbox_ids, 'tube_uids': tube_uids}
     
 def tube(**kwargs):
     model = TubeNeck(**kwargs)

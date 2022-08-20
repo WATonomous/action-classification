@@ -44,6 +44,7 @@ class ROADDataLoader(data.DataLoader):
         labels = [_['label'] for _ in batch]
         mid_times = [_['mid_time'] for _ in batch]
         bbox_ids = [_['bbox_id_frame'] for _ in batch]
+        tube_uids = [_['tube_uid_frame'] for _ in batch]
 
         output = {
             'clips': clips,
@@ -51,7 +52,8 @@ class ROADDataLoader(data.DataLoader):
             'filenames': filenames,
             'labels': labels,
             'mid_times': mid_times,
-            'bbox_ids': bbox_ids
+            'bbox_ids': bbox_ids,
+            'tube_uids': tube_uids
         }
         return output
 
@@ -268,7 +270,9 @@ class ROAD(data.Dataset):
         # the tube uids of the detections in the keyframe, which are the only ones we care about.
         if self.tube_labels:
             clip_labels = []
-            keyframe_tube_uids = [label['tube_uid'] for label in self.data[index]['labels']]
+        
+        # we need this for both tube acar and acar postprocessing
+        keyframe_tube_uids = [label['tube_uid'] for label in self.data[index]['labels']]
 
         # frame indices are offsets from 'index'
         frame_indices = list(range(clip_start_frame - clip_center_frame, clip_end_frame - clip_center_frame))
@@ -306,7 +310,8 @@ class ROAD(data.Dataset):
             target = self.data[index]['labels']
 
         return {'clip': clip, 'aug_info': aug_info, 'label': target,
-                'video_name': video_name, 'mid_time': mid_time, 'bbox_id_frame': keyframe_bbox_ids}
+                'video_name': video_name, 'mid_time': mid_time, 'bbox_id_frame': keyframe_bbox_ids,
+                'tube_uid_frame': keyframe_tube_uids}
 
     def __len__(self):
         if self.tube_labels:
@@ -329,6 +334,7 @@ class ROADmulticropDataLoader(ROADDataLoader):
         labels = [_['label'] for _ in batch]
         mid_times = [_['mid_time'] for _ in batch]
         bbox_ids = [_['bbox_id_frame'] for _ in batch]
+        tube_uids = [_['tube_uid_frame'] for _ in batch]
 
         output = {
             'clips': clips,
@@ -336,7 +342,8 @@ class ROADmulticropDataLoader(ROADDataLoader):
             'filenames': filenames,
             'labels': labels,
             'mid_times': mid_times,
-            'bbox_ids': bbox_ids
+            'bbox_ids': bbox_ids,
+            'tube_uids': tube_uids
         }
         return output
 

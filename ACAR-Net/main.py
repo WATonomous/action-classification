@@ -83,7 +83,7 @@ def main(local_rank, args):
         else:
             # put all command line args and options into wandb.config
             wandb_config = dict(command_line = vars(args), config_file = opt)
-            wandb.init(project='acar', name = opt.experiment_name, config = wandb_config, sync_tensorboard=True)
+            # wandb.init(project='acar', name = opt.experiment_name, config = wandb_config, sync_tensorboard=True)
         signal.signal(signal.SIGINT, handler)
         mkdir(opt.result_path)
         mkdir(os.path.join(opt.result_path, 'tmp'))
@@ -523,7 +523,7 @@ def val_epoch(epoch, data_loader, model, criterion, act_func,
                 outputs = act_func(outputs).cpu().data
                 data_loader.dataset.write_actions(outputs, fnames, mid_times, bbox_ids, num_rois)
                 
-            fnames, mid_times, bboxes = ret['filenames'], ret['mid_times'], ret['bboxes']
+            fnames, mid_times, bboxes, tube_uids = ret['filenames'], ret['mid_times'], ret['bboxes'], ret['tube_uids']
             outputs = act_func(outputs).cpu().data
             idx_to_class = data_loader.dataset.idx_to_class
             for k in range(num_rois):
@@ -532,7 +532,7 @@ def val_epoch(epoch, data_loader, model, criterion, act_func,
                                                     bboxes[k][2], bboxes[k][3])
                 for cls in range(outputs.shape[1]):
                     score_str = '%.3f'%outputs[k][cls]
-                    out_file.write(prefix + ",%d,%s\n" % (idx_to_class[cls]['id'], score_str))
+                    out_file.write(prefix + ",%d,%s,%s\n" % (idx_to_class[cls]['id'], score_str, int(tube_uids[k])))
 
         batch_time.update(time.time() - end_time)
         end_time = time.time()
