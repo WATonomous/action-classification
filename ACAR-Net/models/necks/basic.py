@@ -32,8 +32,13 @@ class BasicNeck(nn.Module):
             pad_ratio = aug_info['pad_ratio']
             sizes_before_padding.append([1. / pad_ratio[0], 1. / pad_ratio[1]])
             
-            for label in data['labels'][idx]:
+            # mid_idx is the index of the keyframe. We use it to 
+            # select the correct frame from the clip.
+            mid_idx = (len(data['labels'][idx]) // 2) -1 
+            keyframe_labels = data['labels'][idx][mid_idx]
+            for label in keyframe_labels:
                 cur_bbox_idx += 1
+
                 if self.training and self.bbox_jitter is not None:
                     bbox_list = bbox_jitter(label['bounding_box'],
                                             self.bbox_jitter.get('num', 1),

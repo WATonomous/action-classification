@@ -127,7 +127,6 @@ def batch_pad(images, alignment=1, pad_value=0):
 class AVADataLoader(data.DataLoader):
     def __init__(self,
                  dataset,
-                 tube_labels,
                  batch_size=1,
                  shuffle=False,
                  sampler=None,
@@ -194,6 +193,27 @@ class AVA(data.Dataset):
         return clip, aug_info
 
     def __getitem__(self, index):
+        """Return data during training
+
+        Parameters
+        ----------
+        index : int
+            index of the example in the data.
+
+        Returns
+        -------
+        dict
+            clip: List[torch.Tensor], Tensor.shape is (3,32,256,341), rgb_images of frames
+            aug_info: List[Dict], info about the augmentations done to the clips
+            label: List[Dict] for the keyframe, contains a list of annotations in that frame.
+            video_name: str, name of the video
+            mid_time: str, frame_id of the key frame
+
+        Raises
+        ------
+        RuntimeError
+            there may be be errors that occur when trying to load actual images into memory.
+        """
         path = os.path.join(self.root_path, self.data[index]['video'])
         frame_format = self.data[index]['format_str']
         start_frame = self.data[index]['start_frame']

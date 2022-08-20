@@ -36,24 +36,25 @@ class TubeNeck(nn.Module):
         -------
 
         dict
-            {'num_rois': total number of rois, 
-             'rois': all the rois we are concerned with 
+            {'num_rois': int, total number of rois, 
+             'rois': torch.Tensor of shape (num_rois, 32, 5). All the rois we are concerned with in the keyframes of the batch.
                     (each label has 32 bboxes corrosponding to each fast frame), 
                     frames with no information about the keyframe labels also have corresponding 
                     rois, filled with ones. Shape will be (num_rois, 32, 5)
                     ex. [a, a, a, b, b, c, c, c, c]
-                    Where all a belong to the same batch element, all b belong to the same
-                    batch element, etc. 
-             'roi_ids': where each batch of rois end in the list of rois, 
+                    here, num_rois = 9, each letter has shape (32, 5), all `a` belong to the same batch element, all `b` belong to the 
+                    same batch element, etc. 
+             'roi_ids': List[int] the indices of `rois` that separate the rois for each example in the batch., 
                     ex. In the above, roi_ids would be [0, 3, 5, 9].
                     This used to easily index the rois tensor later in the acar head.
-             'targets': the target labels for the keyframes with shape (batch_size, num_classes),
-             'sizes_before_padding': image size before padding, used later in the ACAR-head.
-             'filenames': filenames for each example, 
-             'mid_times': mid_times for each example, 
-             'bboxes': bounding boxes unique within the batch, 
+             'targets': torch.Tensor, the target labels for the keyframes with shape (num_rois, num_classes),
+             'sizes_before_padding': List[List] image size before padding, used later in the ACAR-head.
+             'filenames': List[str] filenames for each example, 
+             'mid_times': List[int] mid_times for each example, 
+             'bboxes': List[List], bounding boxes unique within the batch, with shape (num_rois, 4)
              'bbox_idxs': bounding box idxs unique within the batch, 
-             'bbox_ids': bounding box ids as stated in json anno file}
+             'bbox_ids': bounding box ids as stated in json anno file, 
+             'tube_uids': tube uids as stated in the json anno file}
         """
         roi_ids, targets, sizes_before_padding, filenames, mid_times = [0], [], [], [], []
         bbox_ids = [] # used to associate actions to each of the bounding boxes in the key frame

@@ -60,7 +60,6 @@ class ROADDataLoader(data.DataLoader):
 
 class ROAD(data.Dataset):
     def __init__(self,
-                 tube_labels,
                  root_path,
                  annotation_path,
                  class_idx_path,
@@ -71,7 +70,11 @@ class ROAD(data.Dataset):
         """
         Dataset class for ROAD data.
 
-        Each datapoint has the format
+        Note that only valid datapoints are included.
+        A datapoint (a frame) is valid if it can be a center frame of a clip with
+        a number of frames equal to self.num_frames_in_clip.
+
+        We compile the following information for each frame (this is stored in self.data)
         {
             'video': str, name of video,
             'time': int, this index of the frame in the video,
@@ -90,8 +93,6 @@ class ROAD(data.Dataset):
             ]
         }
 
-        tube_labels: bool
-            Whether to use tube labels.
         root_path : str
             path to the folders of rgb images (each folder being a different video in ROAD)
         annotation_path : str
@@ -102,28 +103,27 @@ class ROAD(data.Dataset):
             [train_1', 'train_2', 'train_3', 'val_1', 'val_2', or 'val_3']
         spatial_transform : spatial_transforms.Compose, optional
             apply random transformations such as scaling, cropping, flipping, and jittering, by default None
-        temporal_transform : temporal_transforms.TemporalCenterCrop, optional
-            See TemporalCenterCrop, by default None
+        temporal_transform : temporal_transforms.TemporalCenterRetentionCrop, optional
+            See TemporalCenterRetentionCrop, by default None
         """
-        self.data = [] # all the data
-        self.valid_tube_indices = [] # the indices of the data which holds only valid center frames of tubes
+        self.data = [] # holds all frames in the dataset
+        self.valid_tube_indices = []# holds all indices of valid frames
         self.fps = 12
         self.action_counts = defaultdict(int)
         self.total_boxes = 0
         self.num_frames_in_clip = 91
         self.split = split
-        self.tube_labels = tube_labels
-
-        with open(annotation_path, "r") as f:
-            fs = f.read()
-            ann_dict = json.loads(fs)
-            self.load_data_split(ann_dict)
 
         with open(class_idx_path, "r") as f:
             items = json.load(f).items()
             self.idx_to_class = sorted(items, key=lambda x: x[1])
             self.idx_to_class = list(
                 map(lambda x: {'name': x[0], 'id': x[1]}, self.idx_to_class))
+
+        with open(annotation_path, "r") as f:
+            fs = f.read()
+            ann_dict = json.loads(fs)
+            self.load_data_split(ann_dict)
 
         self.root_path = root_path
         self.spatial_transform = spatial_transform
@@ -157,19 +157,28 @@ class ROAD(data.Dataset):
                 n_frames = clip_end_frame - clip_start_frame + 1
 
                 # then we gather all label information in this frame.
-                assert len(frame['annos']) > 0, frame['annotated']
                 labels = []
                 for bbox_id, annon in frame['annos'].items():
                     for action_id in annon['action_ids']:
                         self.action_counts[action_id] += 1
+                    if 'tube_uid' not in annon:
+                        # when testing on our own object detector (non ground truth
+                        # without an object tracker), we don't have tube_uid, so we infill 
+                        # it with the frame id. the effect of this downstream is that no clip frame
+                        # other than the midframe will have labels. This is fine as long as
+                        # we are using default acar, which only selects the midframe anyways.
+                        tube_uid = f"{frame_id}_{action_id}_{self.action_counts[action_id]}"
+                    else:
+                        tube_uid = annon['tube_uid']
                     labels.append({
-                        'tube_uid': annon['tube_uid'],
+                        'tube_uid': tube_uid,
                         'bounding_box': annon['box'],
                         'bbox_id': bbox_id,
                         'label': annon['action_ids']})
 
                 if n_frames == self.num_frames_in_clip:
                     self.valid_tube_indices.append(len(self.data))
+
                 self.data.append({
                     'video': video,
                     'time': frame_id,
@@ -184,16 +193,10 @@ class ROAD(data.Dataset):
         # track and print data distribution for potential debugging purposes
         print("Data Distribution by Action Class:")
         for k, v in self.action_counts.items():
-            try:
-                print(ann_dict['all_action_labels'][k], v)
-            except KeyError:
-                print("Distribution not Available")
-                break
+            print(self.idx_to_class[k], v)
 
-    def detection_bbox_to_ava(self, bbox):
-        x1, y1, x2, y2 = bbox
-        convbb = [x1/1280, y1/960, x2/1280, y2/960]
-        return convbb
+        print("valid tube indices:", len(self.valid_tube_indices))
+        print("total datapoints:", len(self.data))
 
     def write_to_json(self):
         ''' Dumps annotation dictionary into the desire json file
@@ -242,23 +245,21 @@ class ROAD(data.Dataset):
         Returns
         -------
         dict
-            clip: rgb_images of frames
-            aug_info: some sort of info about the augmentations done to the clips
-            label: The target labels of the keyframe, for use in default acar
-            clip_labels: the labels of all frames in the tube, for use in tube_acar
-            video_name: name of the video
-            mid_time: frame_id of the key frame
-            bbox_ids: bbox ids of the key frame
+            clip: List[torch.Tensor], Tensor.shape is (3,32,256,341), rgb_images of frames
+            aug_info: List[Dict], info about the augmentations done to the clips
+            label: List[List[Dict]] for each frame in clip (length 32), contains a list of annotations
+                in the frame, overall representing the labels of all frames in the tube.
+            video_name: str, name of the video
+            mid_time: str, frame_id of the key frame
+            bbox_id_frame: bbox ids of the key frame
+            tube_uid_frame: tube uids of the key frame
 
         Raises
         ------
         RuntimeError
             there may be be errors that occur when trying to load actual images into memory.
         """
-
-        if self.tube_labels:
-            # if tube_labels, we use the valid tube indices of the data as the sample space.
-            index = self.valid_tube_indices[index]
+        index = self.valid_tube_indices[index]
         path = os.path.join(self.root_path, self.data[index]['video'])
         frame_format = self.data[index]['format_str']
         clip_start_frame = self.data[index]['clip_start_frame']
@@ -267,21 +268,17 @@ class ROAD(data.Dataset):
         mid_time = str(self.data[index]['time'])
         video_name = self.data[index]['video']
 
-        # the tube uids of the detections in the keyframe, which are the only ones we care about.
-        if self.tube_labels:
-            clip_labels = []
-        
-        # we need this for both tube acar and acar postprocessing
+        clip_labels = []
         keyframe_tube_uids = [label['tube_uid'] for label in self.data[index]['labels']]
 
         # frame indices are offsets from 'index'
         frame_indices = list(range(clip_start_frame - clip_center_frame, clip_end_frame - clip_center_frame))
 
-        if self.temporal_transform is not None and self.tube_labels:
+        if self.temporal_transform is not None:
             # the center frame offset is 0
+            # this temporal transform must be TemporalCenterRetentionCrop
             frame_indices = self.temporal_transform(frame_indices, 0)
-        elif self.temporal_transform is not None and not self.tube_labels:
-            frame_indices = self.temporal_transform(frame_indices)
+            assert frame_indices.index(0) == (len(frame_indices) // 2) - 1
 
         # get bbox_ids of the keyframe
         keyframe_bbox_ids = [label['bbox_id'] for label in self.data[index]['labels']]
@@ -289,9 +286,8 @@ class ROAD(data.Dataset):
         clip = []
         for i in range(len(frame_indices)):
 
-            if self.tube_labels:
-                clip_labels.append([label for label in self.data[index + frame_indices[i]]['labels']
-                                    if label['tube_uid'] in keyframe_tube_uids])
+            clip_labels.append([label for label in self.data[index + frame_indices[i]]['labels']
+                                if label['tube_uid'] in keyframe_tube_uids])
 
             image_path = os.path.join(path, frame_format % (clip_center_frame + frame_indices[i]))
             try:
@@ -304,20 +300,12 @@ class ROAD(data.Dataset):
 
         clip, aug_info = self._spatial_transform(clip)
 
-        if self.tube_labels:
-            target = clip_labels
-        else:
-            target = self.data[index]['labels']
-
-        return {'clip': clip, 'aug_info': aug_info, 'label': target,
+        return {'clip': clip, 'aug_info': aug_info, 'label': clip_labels,
                 'video_name': video_name, 'mid_time': mid_time, 'bbox_id_frame': keyframe_bbox_ids,
                 'tube_uid_frame': keyframe_tube_uids}
 
     def __len__(self):
-        if self.tube_labels:
-            return len(self.valid_tube_indices)
-        else:
-            return len(self.data)
+        return len(self.valid_tube_indices)
 
 class ROADmulticropDataLoader(ROADDataLoader):
     def _collate_fn(self, batch):
