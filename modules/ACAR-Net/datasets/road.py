@@ -66,7 +66,8 @@ class ROAD(data.Dataset):
                  split,
                  save_json=False,
                  spatial_transform=None,
-                 temporal_transform=None):
+                 temporal_transform=None, 
+                 tracker_transform=None):
         """
         Dataset class for ROAD data.
 
@@ -128,12 +129,14 @@ class ROAD(data.Dataset):
         self.root_path = root_path
         self.spatial_transform = spatial_transform
         self.temporal_transform = temporal_transform
+        self.tracker_transform = tracker_transform
 
         if save_json:
             self.annotation_path = annotation_path
             self.w_ann_dict = copy.deepcopy(ann_dict)
 
     def load_data_split(self, ann_dict):
+        action_info = False # checks if action class is given
         for video in ann_dict['db'].keys():
             if self.split not in ann_dict['db'][video]['split_ids']:
                 continue
@@ -160,6 +163,8 @@ class ROAD(data.Dataset):
                 labels = []
                 for bbox_id, annon in frame['annos'].items():
                     for action_id in annon['action_ids']:
+                        if action_id != 1:
+                            action_info = True
                         self.action_counts[action_id] += 1
                     if 'tube_uid' not in annon:
                         # when testing on our own object detector (non ground truth
@@ -191,9 +196,10 @@ class ROAD(data.Dataset):
                 })
 
         # track and print data distribution for potential debugging purposes
-        print("Data Distribution by Action Class:")
-        for k, v in self.action_counts.items():
-            print(self.idx_to_class[k], v)
+        if action_info:
+            print("Data Distribution by Action Class:")
+            for k, v in self.action_counts.items():
+                print(self.idx_to_class[k], v)
 
         print("valid tube indices:", len(self.valid_tube_indices))
         print("total datapoints:", len(self.data))
@@ -297,6 +303,9 @@ class ROAD(data.Dataset):
                 raise RuntimeError(
                     'Caught "{}" when loading {}'.format(str(e), image_path))
             clip.append(img)
+
+        if self.tracker_transform is not None:
+            self.tracker_transform(clip_labels)
 
         clip, aug_info = self._spatial_transform(clip)
 

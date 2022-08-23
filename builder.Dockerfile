@@ -1,4 +1,4 @@
-FROM pure/python:3.8
+FROM python:3.8.13-bullseye
 WORKDIR /project
 
 # cv2 dependencies

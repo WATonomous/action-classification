@@ -34,7 +34,7 @@ class BasicNeck(nn.Module):
             
             # mid_idx is the index of the keyframe. We use it to 
             # select the correct frame from the clip.
-            mid_idx = (len(data['labels'][idx]) // 2) -1 
+            mid_idx = (len(data['labels'][idx]) // 2) - 1 
             keyframe_labels = data['labels'][idx][mid_idx]
             for label in keyframe_labels:
                 cur_bbox_idx += 1

@@ -135,4 +135,4 @@ val:
         labelmap: /road/road_trainval_v1.0.json
         groundtruth: /road/road_trainval_v1.0.json
 
-        save_json: True
+        save_json: False

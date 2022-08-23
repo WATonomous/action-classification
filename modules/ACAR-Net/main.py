@@ -17,7 +17,7 @@ import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel
 
 from calc_mAP import run_evaluation
-from datasets import ava, road, spatial_transforms, temporal_transforms
+from datasets import ava, road, spatial_transforms, temporal_transforms, tracker_transforms
 from distributed_utils import init_distributed
 import losses
 from losses import *
@@ -83,7 +83,7 @@ def main(local_rank, args):
         else:
             # put all command line args and options into wandb.config
             wandb_config = dict(command_line = vars(args), config_file = opt)
-            # wandb.init(project='acar', name = opt.experiment_name, config = wandb_config, sync_tensorboard=True)
+            wandb.init(project='acar', name = opt.experiment_name, config = wandb_config, sync_tensorboard=True)
         signal.signal(signal.SIGINT, handler)
         mkdir(opt.result_path)
         mkdir(os.path.join(opt.result_path, 'tmp'))
@@ -129,6 +129,8 @@ def main(local_rank, args):
 
         temporal_transform = getattr(temporal_transforms, train_aug.temporal.type)(**train_aug.temporal.get('kwargs', {}))
 
+        tracker_transform = getattr(tracker_transforms, train_aug.bbox_drop.type)(**train_aug.bbox_drop.get('kwargs', {}))
+
         if opt.get('dataset', "ava") == "road":
             # ava is the default dataset when dataset is unspecified 
             # augmented train data has size 76139, the most of which have 91 frames. 
@@ -137,8 +139,10 @@ def main(local_rank, args):
                 opt.train.annotation_path, 
                 opt.train.class_idx_path,
                 "train_1",
+                False,
                 spatial_transform,
                 temporal_transform,
+                tracker_transform
             )
         else:
             train_data = ava.AVA(
@@ -516,13 +520,12 @@ def val_epoch(epoch, data_loader, model, criterion, act_func,
 
         if save_pred:
             eval_mAP = opt.val.eval_mAP
+            outputs = act_func(outputs).cpu().data
             if eval_mAP.save_json:
                 fnames, mid_times, bbox_ids = ret['filenames'], ret['mid_times'], ret['bbox_ids']
-                outputs = act_func(outputs).cpu().data
                 data_loader.dataset.write_actions(outputs, fnames, mid_times, bbox_ids, num_rois)
                 
             fnames, mid_times, bboxes, tube_uids = ret['filenames'], ret['mid_times'], ret['bboxes'], ret['tube_uids']
-            outputs = act_func(outputs).cpu().data
             idx_to_class = data_loader.dataset.idx_to_class
             for k in range(num_rois):
                 prefix = "%s,%s,%.3f,%.3f,%.3f,%.3f"%(fnames[k], mid_times[k],

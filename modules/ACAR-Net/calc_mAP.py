@@ -63,8 +63,9 @@ def read_csv(csv_file, class_whitelist=None, capacity=0):
     labels = defaultdict(list)
     scores = defaultdict(list)
     reader = csv.reader(csv_file)
-    for row in reader:
-        assert len(row) in [7, 8, 9], "Wrong number of columns: " + row
+    for row_r in reader:
+        row = row_r[:7]
+        assert len(row) in [7, 8], "Wrong number of columns: " + row
         image_key = make_image_key(row[0], row[1])
         x1, y1, x2, y2 = [float(n) for n in row[2:6]]
         action_id = int(row[6])
@@ -210,8 +211,8 @@ def run_evaluation(labelmap, groundtruth, detections, exclusions, logger):
     for image_key in pred_boxes:
         # ignore frames without ground-truth annotations
         if image_key not in gt_boxes.keys():
-            logger.info(("Found excluded timestamp in detections: %s. "
-                          "It will be ignored."), image_key)
+            # logger.info(("Found excluded timestamp in detections: %s. "
+            #               "It will be ignored."), image_key)
             num_pred_ignored += 1
             continue
         pascal_evaluator.add_single_detected_image_info(
