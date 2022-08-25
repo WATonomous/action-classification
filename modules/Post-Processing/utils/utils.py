@@ -4,7 +4,7 @@ import socket
 import getpass
 import copy
 import numpy as np
-from modules.box_utils import nms
+from utils.box_utils import nms
 from datetime import datetime
 import logging 
 import torch

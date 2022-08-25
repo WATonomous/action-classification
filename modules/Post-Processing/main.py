@@ -1,14 +1,43 @@
-import copy
-import os
+from easydict import EasyDict
+import yaml
 import json
-import time
-import pdb
-import pickle
-import numpy as np
-import scipy.io as io  # to save detection as mat files
-from data.datasets import is_part_of_subsets, get_filtered_tubes, get_filtered_frames, filter_labels, read_ava_annotations
-from data.datasets import get_frame_level_annos_ucf24, get_filtered_tubes_ucf24, read_labelmap
-from modules.tube_helper import get_tube_3Diou, make_det_tube
-from modules import utils
-logger = utils.get_logger(__name__)
+import argparse
 
+import data.transforms as vtf
+
+from torchvision import transforms
+from evaluation import format_acar_dets, eval_framewise_dets, build_eval_tubes
+from data import VideoDataset
+from utils import utils
+
+def main(args):
+    """ POST-PROCESSING AND EVALUATION
+        Takes in the json annotations coming out of ACAR and processes them into 
+        data compatible with 3D-RetinaNet's ROAD-Evaluation code
+    """
+    # load config
+    with open(args.config) as f:
+        config = yaml.load(f, Loader=yaml.FullLoader)
+    opt = EasyDict(config)
+
+    args = utils.set_args(args) # set directories and SUBSETS for datasets
+
+    skip_step = args.SEQ_LEN*8
+
+    val_transform = transforms.Compose([ 
+                        vtf.ResizeClip(args.MIN_SIZE, args.MAX_SIZE),
+                        vtf.ToTensorStack(),
+                        vtf.Normalize(mean=args.MEANS,std=args.STDS)])
+
+    val_dataset = VideoDataset(args, train=False, transform=val_transform, skip_step=skip_step, full_test=full_test)
+
+    format_acar_dets(opt.formatting)
+    eval_framewise_dets(opt.eval.framewise)
+    build_eval_tubes(opt.eval.videowise)    
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Post-processing and Eval')
+    parser.add_argument('--config', type=str, required=True)
+    args = parser.parse_args()
+
+    main(args)

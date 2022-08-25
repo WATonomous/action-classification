@@ -8,7 +8,7 @@ Copyright (c) 2019 Gurkirt Singh
 import torch.nn as nn
 import torch.nn.functional as F
 import torch, pdb, time
-from modules import box_utils
+from utils import box_utils
 
 
 # Credits:: from https://github.com/facebookresearch/maskrcnn-benchmark/blob/master/maskrcnn_benchmark/layers/smooth_l1_loss.py

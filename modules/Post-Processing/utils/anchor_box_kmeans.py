@@ -2,7 +2,7 @@ import torch
 from math import sqrt as sqrt
 from itertools import product as product
 import numpy as np
-from modules.utils import BufferList
+from utils.utils import BufferList
 
 
 class anchorBox(torch.nn.Module):

@@ -1,11 +1,11 @@
-import pandas as pd
+import json
 import numpy as np
 import pickle
 import os
 from tqdm import tqdm
 
 
-def format_acar_dets(args):
+def format_acar_dets(opts):
     """Uses a path to an acar prediction csv to write .pkl files in the
     format that the evaluation pipeline expects. 
 
@@ -16,7 +16,7 @@ def format_acar_dets(args):
 
     Parameters
     ----------
-    args : argparse object
+    opts : argparse object
         contains all of the arguments read and initialized in main.py
     """
     # the training data has 22 classes, but the evaluation only considers 19 classes
@@ -26,10 +26,10 @@ def format_acar_dets(args):
 
     # read predictions csv into dataframe. predict_epoch_{}.csv has no headers.
     # columns are {video, frame, xmin, ymin, xmax, ymax, action, confidence} in that order
-    predictions_df = pd.read_csv(args.PRED_CSV, header = None)
+    predictions_df = pd.read_csv(opts.prediction_path, header = None)
     predictions_df.columns = ["video", "frame", "xmin", "ymin", "xmax", "ymax", "action", "confidence"]
     formatted_predictions = {}
-    print(f"Formatting predictions from {args.PRED_CSV}")
+    print(f"Formatting predictions from {opts.prediction_path}")
     for _, row in tqdm(predictions_df.iterrows()):
         box_hash = f"{row['xmin']}_{row['ymin']}_{row['xmax']}_{row['ymax']}"
         if row['video'] not in formatted_predictions:
@@ -49,18 +49,18 @@ def format_acar_dets(args):
         formatted_predictions[row['video']][row['frame']][box_hash]['confidences'][action_idx] = float(row['confidence'])
 
 
-    if not os.path.exists(args.ACAR_DET_SAVE_DIR):
-        os.makedirs(args.ACAR_DET_SAVE_DIR)
-    print(f"Writing .pkl files to {args.ACAR_DET_SAVE_DIR}")
+    if not os.path.exists(opts.save_pickles_path):
+        os.makedirs(opts.save_pickles_path)
+    print(f"Writing .pkl files to {opts.save_pickles_path}")
     for video_name, video in tqdm(formatted_predictions.items()):
         for frame_num, annos in video.items():
             save_data = {'main': np.zeros((len(annos), 23))}
             for i, anno in enumerate(annos.values()):
                 save_data['main'][i][0:4] = np.array(anno['bbox'])
                 save_data['main'][i][4:23] = np.array(anno['confidences'])
-            if not os.path.exists(os.path.join(args.ACAR_DET_SAVE_DIR, video_name)):
-                os.makedirs(os.path.join(args.ACAR_DET_SAVE_DIR, video_name))
-            with open(f"{args.ACAR_DET_SAVE_DIR}/{video_name}/%05d.pkl" % frame_num, 'wb') as f:
+            if not os.path.exists(os.path.join(opts.save_pickles_path, video_name)):
+                os.makedirs(os.path.join(opts.save_pickles_path, video_name))
+            with open(f"{opts.save_pickles_path}/{video_name}/%05d.pkl" % frame_num, 'wb') as f:
                 pickle.dump(save_data, f)
     
     print("Done!")

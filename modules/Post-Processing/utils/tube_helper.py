@@ -1,11 +1,11 @@
 import numpy as np
 import pdb
-from modules import utils
+from utils import utils
 import scipy.signal as signal
 logger = utils.get_logger(__name__)
 from scipy.signal import savgol_filter
 # from gen_dets import make_joint_probs_from_marginals
-from modules.utils import make_joint_probs_from_marginals
+from utils.utils import make_joint_probs_from_marginals
 
 over_s = 0.0
 under_s = 0.0

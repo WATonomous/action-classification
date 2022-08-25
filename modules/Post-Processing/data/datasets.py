@@ -18,9 +18,9 @@ import numpy as np
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES =   True
 from PIL import Image, ImageDraw
-from modules.tube_helper import make_gt_tube
+from utils.tube_helper import make_gt_tube
 import random as random
-from modules import utils 
+from utils import utils 
 from random import shuffle
 
 logger = utils.get_logger(__name__)

@@ -1,0 +1,20 @@
+transforms:
+  min_size: 512
+  max_size: 
+
+formatting:
+  prediction_path: '/road/flow_color_model_fpn_x101_64x4d_finetune_val1_detections_inactive_merged_gt_format_0.1_new_ocsort_acar.json'
+  save_pickles_path: './output/pickle_dets'
+
+eval:
+  framewise:
+    eval_epochs: 1
+    mode: "eval_external"
+    acar_det_save_dir: './output/acar'
+    save_root: ''
+    joint_4m_marginals: False
+    dataset: 'road'
+    label_types:
+    subsets:
+
+  videowise:

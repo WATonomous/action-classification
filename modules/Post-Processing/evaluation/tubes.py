@@ -7,13 +7,13 @@ import pdb
 import pickle
 import copy
 import torch.utils.data as data_utils
-from modules import utils
-from modules.evaluation import evaluate_tubes
-from modules.box_utils import decode, nms
+from utils import utils
+from evaluation import evaluate_tubes
+from utils.box_utils import decode, nms
 from data import custum_collate, get_gt_video_list
-from modules.tube_helper import nms3dt
-import modules.gen_agent_paths as gen_paths #update_agent_paths, copy_live_to_dead,
-from modules.tube_helper import trim_tubes
+from utils.tube_helper import nms3dt
+import utils.gen_agent_paths as gen_paths #update_agent_paths, copy_live_to_dead,
+from utils.tube_helper import trim_tubes
 logger = utils.get_logger(__name__)
 
 def build_eval_tubes(args, val_dataset):

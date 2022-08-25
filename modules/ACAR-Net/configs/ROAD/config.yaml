@@ -6,7 +6,7 @@ model_path: ./output/saved_models # where the model is saved
 manual_seed: 1
 print_freq: 20
 dataset: "road" #always road, for both normal acar and tube_acar
-experiment_name: "optflowDET_ocsort_acar_tuberobustness_0.2_drop_rate"
+experiment_name: "optflowDET_ocsort_acar_tuberobustness_0.1_drop_rate"
 # node * processes per node = # of cores that will be allocated
 # we have one node, but can have multiple processes per node to take advantage of
 # multiple GPU training (1 GPU per process). Resource: https://yangkky.github.io/2019/07/08/distributed-pytorch-tutorial.html 
@@ -86,7 +86,7 @@ train:
         bbox_drop: 
             type: RandomBBoxDrop
             kwargs:
-                drop_rate: 0.15
+                drop_rate: 0.1
 
     n_epochs: 8
     val_freq: 1
