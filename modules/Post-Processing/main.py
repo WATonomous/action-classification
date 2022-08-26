@@ -1,12 +1,13 @@
 from easydict import EasyDict
 import yaml
-import json
 import argparse
 
 import data.transforms as vtf
 
 from torchvision import transforms
-from evaluation import format_acar_dets, eval_framewise_dets, build_eval_tubes
+from evaluation.format_acar_dets import format_acar_dets
+from evaluation.gen_dets import eval_framewise_dets
+from evaluation.tubes import build_eval_tubes
 from data import VideoDataset
 from utils import utils
 
@@ -20,20 +21,20 @@ def main(args):
         config = yaml.load(f, Loader=yaml.FullLoader)
     opt = EasyDict(config)
 
-    args = utils.set_args(args) # set directories and SUBSETS for datasets
+    opt = utils.set_args(opt) # set directories and SUBSETS for datasets
 
-    skip_step = args.SEQ_LEN*8
+    skip_step = opt.SEQ_LEN*8
 
     val_transform = transforms.Compose([ 
-                        vtf.ResizeClip(args.MIN_SIZE, args.MAX_SIZE),
+                        vtf.ResizeClip(opt.MIN_SIZE, opt.MAX_SIZE),
                         vtf.ToTensorStack(),
-                        vtf.Normalize(mean=args.MEANS,std=args.STDS)])
+                        vtf.Normalize(mean=opt.MEANS,std=opt.STDS)])
 
-    val_dataset = VideoDataset(args, train=False, transform=val_transform, skip_step=skip_step, full_test=full_test)
+    val_dataset = VideoDataset(opt, train=False, transform=val_transform, skip_step=skip_step, full_test=True)
 
     format_acar_dets(opt.formatting)
-    eval_framewise_dets(opt.eval.framewise)
-    build_eval_tubes(opt.eval.videowise)    
+    eval_framewise_dets(opt, val_dataset)
+    build_eval_tubes(opt, val_dataset)    
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Post-processing and Eval')

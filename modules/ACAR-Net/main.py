@@ -645,5 +645,4 @@ if __name__ == '__main__':
     if args.profile:
         torch.multiprocessing.spawn(profiler_wrapper, args=(args,), nprocs=args.nproc_per_node)
 
-    else:
-        torch.multiprocessing.spawn(main, args=(args,), nprocs=args.nproc_per_node)
+    else:        torch.multiprocessing.spawn(main, args=(args,), nprocs=args.nproc_per_node)

@@ -78,32 +78,7 @@ def copy_source(source_dir):
 def set_args(args):
     args.MAX_SIZE = int(args.MIN_SIZE*1.35)
     args.MILESTONES = [int(val) for val in args.MILESTONES.split(',')]
-    #args.GAMMAS = [float(val) for val in args.GAMMAS.split(',')]
-    args.EVAL_EPOCHS = [int(val) for val in args.EVAL_EPOCHS.split(',')]
-
-    args.TRAIN_SUBSETS = [val for val in args.TRAIN_SUBSETS.split(',') if len(val)>1]
-    args.VAL_SUBSETS = [val for val in args.VAL_SUBSETS.split(',') if len(val)>1]
-    args.TEST_SUBSETS = [val for val in args.TEST_SUBSETS.split(',') if len(val)>1]
-    args.TUBES_EVAL_THRESHS = [ float(val) for val in args.TUBES_EVAL_THRESHS.split(',') if len(val)>0.0001]
-    args.model_subtype = args.MODEL_TYPE.split('-')[0]
-    ## check if subsets are okay
-    possible_subets = ['test', 'train','val']
-    for idx in range(1,4):
-        possible_subets.append('train_'+str(idx))        
-        possible_subets.append('val_'+str(idx))        
-
-    if len(args.VAL_SUBSETS) < 1 and args.DATASET == 'road':
-        args.VAL_SUBSETS = [ss.replace('train', 'val') for ss in args.TRAIN_SUBSETS]
-    if len(args.TEST_SUBSETS) < 1:
-        # args.TEST_SUBSETS = [ss.replace('train', 'val') for ss in args.TRAIN_SUBSETS]
-        args.TEST_SUBSETS = args.VAL_SUBSETS
-    
-    for subsets in [args.TRAIN_SUBSETS, args.VAL_SUBSETS, args.TEST_SUBSETS]:
-        for subset in subsets:
-            assert subset in possible_subets, 'subest should from one of these '+''.join(possible_subets)
-
     args.DATASET = args.DATASET.lower()
-    args.ARCH = args.ARCH.lower()
 
     args.MEANS =[0.485, 0.456, 0.406]
     args.STDS = [0.229, 0.224, 0.225]
@@ -112,22 +87,6 @@ def set_args(args):
     hostname = socket.gethostname()
     args.hostname = hostname
     args.user = username
-    
-    args.model_init = 'kinetics'
-
-    args.MODEL_PATH = args.MODEL_PATH[:-1] if args.MODEL_PATH.endswith('/') else args.MODEL_PATH 
-
-    assert args.MODEL_PATH.endswith('kinetics-pt') or args.MODEL_PATH.endswith('imagenet-pt') 
-    args.model_init = 'imagenet' if args.MODEL_PATH.endswith('imagenet-pt') else 'kinetics'
-    
-    if args.MODEL_PATH == 'imagenet':
-        args.MODEL_PATH = os.path.join(args.MODEL_PATH, args.ARCH+'.pth')
-    else:
-        args.MODEL_PATH = os.path.join(args.MODEL_PATH, args.ARCH+args.MODEL_TYPE+'.pth')
-            
-    
-    print('Your working directories are::\nLOAD::> ', args.DATA_ROOT, '\nSAVE::> ', args.SAVE_ROOT)
-    print('Your model will be initialized using', args.MODEL_PATH)
     
     return args
 

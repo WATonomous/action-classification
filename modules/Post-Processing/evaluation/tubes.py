@@ -8,7 +8,7 @@ import pickle
 import copy
 import torch.utils.data as data_utils
 from utils import utils
-from evaluation import evaluate_tubes
+from evaluation.evaluation import evaluate_tubes
 from utils.box_utils import decode, nms
 from data import custum_collate, get_gt_video_list
 from utils.tube_helper import nms3dt

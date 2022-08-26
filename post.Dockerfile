@@ -19,8 +19,8 @@ RUN pip install \
     av \
 	moviepy \
 	tqdm>=4.29.0 \
-    scipy
-
+    scipy \
+	pandas
 
 RUN pip install torch==1.10.0+cu111 torchvision==0.11.0+cu111 pytorchvideo -f https://download.pytorch.org/whl/cu111/torch_stable.html
 

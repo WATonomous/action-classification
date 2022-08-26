@@ -342,7 +342,7 @@ def get_video_tubes(final_annots, videoname):
             tubes[key] = filtered_tubes
     
     return tubes
-
+1
 
 def is_part_of_subsets(split_ids, SUBSETS):
     
@@ -362,9 +362,8 @@ class VideoDataset(tutils.data.Dataset):
     def __init__(self, args, train=True, input_type='rgb', transform=None, 
                 skip_step=1, full_test=False):
 
-        self.ANCHOR_TYPE =  args.ANCHOR_TYPE 
         self.DATASET = args.DATASET
-        self.SUBSETS = args.SUBSETS
+        self.SUBSETS = ['val_1', 'val_2', 'val_3']
         self.SEQ_LEN = args.SEQ_LEN
         self.BATCH_SIZE = args.BATCH_SIZE
         self.MIN_SEQ_STEP = args.MIN_SEQ_STEP
@@ -374,212 +373,22 @@ class VideoDataset(tutils.data.Dataset):
         self.skip_step = skip_step #max(skip_step, self.SEQ_LEN*self.MIN_SEQ_STEP/2)
         self.num_steps = max(1, int(self.MAX_SEQ_STEP - self.MIN_SEQ_STEP + 1 )//2)
         # self.input_type = input_type
-        self.input_type = input_type+'-images'
         self.train = train
-        self.root = args.DATA_ROOT + args.DATASET + '/'
-        self._imgpath = os.path.join(self.root, self.input_type)
-        self.anno_root = self.root
-        if len(args.ANNO_ROOT)>1:
-            self.anno_root = args.ANNO_ROOT 
-
+        self.anno_path = args.ANNO_PATH
+        self._imgpath = args.IMG_PATH
+    
         # self.image_sets = image_sets
         self.transform = transform
         self.ids = list()
         if self.DATASET == 'road':
             self._make_lists_road(args.MODE)  
-        elif self.DATASET == 'ucf24':
-            self._make_lists_ucf24() 
-        elif self.DATASET == 'ava':
-            self._make_lists_ava() 
         else:
-            raise Exception('Specfiy corect dataset')
+            raise Exception('Specify correct dataset')
         
         self.num_label_types = len(self.label_types)
-
-
-
-    def _make_lists_ava(self):
-
-        assert len(self.SUBSETS) == 1
-
-        self.anno_file  = os.path.join(self.anno_root, 'ava_{}.csv'.format(self.SUBSETS[0]))
-        
-        annotations = read_ava_annotations(self.anno_file)
-        print(self.anno_file, self.anno_root)
-        labelmap_file = os.path.join(self.anno_root, 'ava_actions.pbtxt')
-        class_names, class_ids_map, _ = read_labelmap(labelmap_file)
-
-        
-        self.label_types =  ['action_ness', 'actions'] #
-        num_action_classes = len(class_names)
-        self.num_classes_list = [1, num_action_classes]
-        self.num_classes = 1 + num_action_classes # one for action_ness
-        
-        self.ego_classes = ['Non_action', 'action']
-        self.num_ego_classes = len(self.ego_classes)
-        
-        counts = np.zeros((num_action_classes, 2), dtype=np.int32)
-    
-        # ratios = [1.0, 1.1, 1.1, 0.9, 1.1, 0.8, 0.7, 0.8, 1.1, 1.4, 1.0, 0.8, 0.7, 1.2, 1.0, 0.8, 0.7, 1.2, 1.2, 1.0, 0.9]
-    
-        self.video_list = []
-        self.numf_list = []
-        
-        frame_level_list = []
-
-        default_ego_label = np.zeros(self.num_ego_classes)
-        default_ego_label[0] = 1
-        total_labeled_frame = 0
-        total_num_frames = 0
-        for vid, video_name in enumerate(annotations):
-            # if vid>1:
-                # continue
-
-            self.numf_list.append(27029)
-            self.video_list.append(video_name)
-
-            numf = 27029
-            frame_level_annos, counts, keyframes, skip_count = get_frame_level_annos_ava(annotations[video_name], numf, self.num_classes, class_ids_map, counts=counts, split=self.SUBSETS[0])
-
-            # print('Skipped are skip_count', skip_count, video_name)
-
-            total_labeled_frame += len(keyframes)
-            total_num_frames += numf
-
-            frame_level_list.append(frame_level_annos)  
-
-            start_frames = [kf - self.MAX_SEQ_STEP*self.SEQ_LEN//2 for kf in keyframes]
-
-            # make ids
-            # start_frames = [ f for f in range(numf-self.MIN_SEQ_STEP*self.SEQ_LEN, -1,  -self.skip_step)]
-            # if self.full_test and 0 not in start_frames:
-            # start_frames.append(0)
-            # logger.info('number of start frames: '+ str(len(start_frames)))
-
-            for frame_num, kf in zip(start_frames, keyframes):
-                self.ids.append([vid, frame_num, self.MAX_SEQ_STEP, kf])
-
-
-        logger.info('Labeled frames {:d}/{:d}'.format(total_labeled_frame, total_num_frames))
-        # pdb.set_trace()
-        ptrstr = '\n'
-        self.frame_level_list = frame_level_list
-        self.all_classes = [['action_ness'], class_names.copy()]
-        for k, name in enumerate(self.label_types):
-            if len(self.all_classes[k])>0:
-                labels = self.all_classes[k]
-                # self.num_classes_list.append(len(labels))
-                for c, cls_ in enumerate(labels): # just to see the distribution of train and test sets
-                    ptrstr += '-'.join(self.SUBSETS) + ' {:05d} label: ind={:02d} name:{:s}\n'.format(
-                                                    counts[c,k] , c, cls_)
-        
-        ptrstr += 'Number of ids are {:d}\n'.format(len(self.ids))
-        ptrstr += 'Labeled frames {:d}/{:d}'.format(total_labeled_frame, total_num_frames)
-        self.childs = {}
-        self.num_videos = len(self.video_list)
-        self.print_str = ptrstr
-        
-
-    def _make_lists_ucf24(self):
-
-        self.anno_file  = os.path.join(self.anno_root, 'pyannot_with_class_names.pkl')
-
-        with open(self.anno_file,'rb') as fff:
-            final_annots = pickle.load(fff)
-        
-        database = final_annots['db']
-        self.trainvideos = final_annots['trainvideos']
-        ucf_classes = final_annots['classes']
-        self.label_types =  ['action_ness', 'action'] #
-        # pdb.set_trace()
-        self.num_classes_list = [1, 24]
-        self.num_classes = 25 # one for action_ness
-        
-        self.ego_classes = ['Non_action']  +  ucf_classes
-        self.num_ego_classes = len(self.ego_classes)
-        
-        counts = np.zeros((24, 2), dtype=np.int32)
-    
-        ratios = [1.0, 1.1, 1.1, 0.9, 1.1, 0.8, 0.7, 0.8, 1.1, 1.4, 1.0, 0.8, 0.7, 1.2, 1.0, 0.8, 0.7, 1.2, 1.2, 1.0, 0.9]
-    
-        self.video_list = []
-        self.numf_list = []
-        
-        frame_level_list = []
-
-        default_ego_label = np.zeros(self.num_ego_classes)
-        default_ego_label[0] = 1
-        total_labeled_frame = 0
-        total_num_frames = 0
-
-        for videoname in sorted(database.keys()):    
-            is_part = 1
-            if 'train' in self.SUBSETS and videoname not in self.trainvideos:
-                continue
-            elif 'test' in self.SUBSETS and videoname in self.trainvideos:
-                continue
-            # print(database[videoname].keys())
-            action_id = database[videoname]['label']
-            annotations = database[videoname]['annotations']
-            
-            numf = database[videoname]['numf']
-            self.numf_list.append(numf)
-            self.video_list.append(videoname)
-            
-            # frames = database[videoname]['frames']
-            
-            frame_level_annos, counts = get_frame_level_annos_ucf24(annotations, numf, self.num_classes, counts)
-
-            frames_with_boxes = 0
-            for frame_index in range(numf): #frame_level_annos:
-                if len(frame_level_annos[frame_index]['labels'])>0:
-                    frames_with_boxes += 1
-                frame_level_annos[frame_index]['labels'] = np.asarray(frame_level_annos[frame_index]['labels'], dtype=np.float32)
-                frame_level_annos[frame_index]['boxes'] = np.asarray(frame_level_annos[frame_index]['boxes'], dtype=np.float32)
-
-            total_labeled_frame += frames_with_boxes
-            total_num_frames += numf
-
-            # logger.info('Frames with Boxes are {:d} out of {:d} in {:s}'.format(frames_with_boxes, numf, videoname))
-            frame_level_list.append(frame_level_annos)  
-            ## make ids
-            start_frames = [ f for f in range(numf-self.MIN_SEQ_STEP*self.SEQ_LEN, -1,  -self.skip_step)]
-            
-            if self.full_test and 0 not in start_frames:
-                start_frames.append(0)
-            # logger.info('number of start frames: '+ str(len(start_frames)))
-            for frame_num in start_frames:
-                step_list = [s for s in range(self.MIN_SEQ_STEP, self.MAX_SEQ_STEP+1) if numf-s*self.SEQ_LEN>=frame_num]
-                shuffle(step_list)
-                # print(len(step_list), self.num_steps)
-                for s in range(min(self.num_steps, len(step_list))):
-                    video_id = self.video_list.index(videoname)
-                    self.ids.append([video_id, frame_num ,step_list[s]])
-
-        logger.info('Labeled frames {:d}/{:d}'.format(total_labeled_frame, total_num_frames))
-        # pdb.set_trace()
-        ptrstr = '\n'
-        self.frame_level_list = frame_level_list
-        self.all_classes = [['action_ness'], ucf_classes.copy()]
-        for k, name in enumerate(self.label_types):
-            labels = self.all_classes[k]
-            # self.num_classes_list.append(len(labels))
-            for c, cls_ in enumerate(labels): # just to see the distribution of train and test sets
-                ptrstr += '-'.join(self.SUBSETS) + ' {:05d} label: ind={:02d} name:{:s}\n'.format(
-                                                counts[c,k] , c, cls_)
-        
-        ptrstr += 'Number of ids are {:d}\n'.format(len(self.ids))
-        ptrstr += 'Labeled frames {:d}/{:d}'.format(total_labeled_frame, total_num_frames)
-        self.childs = {}
-        self.num_videos = len(self.video_list)
-        self.print_str = ptrstr
-        
         
     def _make_lists_road(self, mode):
-
-        self.anno_file  = os.path.join(self.root, 'road_trainval_v1.0.json')
-
-        with open(self.anno_file,'r') as fff:
+        with open(self.anno_path,'r') as fff:
             final_annots = json.load(fff)
         
         database = final_annots['db']
@@ -765,16 +574,15 @@ class VideoDataset(tutils.data.Dataset):
         height, width = clip.shape[-2:]
         wh = [height, width]
         # print('image', wh)
-        if self.ANCHOR_TYPE == 'RETINA':
-            for bb, boxes in enumerate(all_boxes):
-                if boxes.shape[0]>0:
-                    if boxes[0,0]>1:
-                        print(bb, videoname)
-                        pdb.set_trace()
-                    boxes[:, 0] *= width # width x1
-                    boxes[:, 2] *= width # width x2
-                    boxes[:, 1] *= height # height y1
-                    boxes[:, 3] *= height # height y2
+        for bb, boxes in enumerate(all_boxes):
+            if boxes.shape[0]>0:
+                if boxes[0,0]>1:
+                    print(bb, videoname)
+                    pdb.set_trace()
+                boxes[:, 0] *= width # width x1
+                boxes[:, 2] *= width # width x2
+                boxes[:, 1] *= height # height y1
+                boxes[:, 3] *= height # height y2
 
         return clip, all_boxes, labels, ego_labels, index, wh, self.num_classes
 

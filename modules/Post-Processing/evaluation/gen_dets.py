@@ -14,11 +14,11 @@ import pdb
 import pickle
 import copy
 import torch.utils.data as data_utils
-from evaluation import evaluate_frames
+from evaluation.evaluation import evaluate_frames
 from utils.box_utils import decode, nms
 from data import custum_collate
 from utils import utils
-import evaluation as evaluate
+import evaluation.evaluation as evaluate
 from utils.utils import make_joint_probs_from_marginals
 logger = utils.get_logger(__name__)
 
@@ -273,62 +273,51 @@ def get_ltype_dets(frame_dets, start_id, numc, ltype, args):
 
 
 def eval_framewise_dets(args, val_dataset):
-    for epoch in args.EVAL_EPOCHS:
-        if args.MODE == 'eval_external':
-            if not os.path.exists(os.path.join(args.ACAR_DET_SAVE_DIR, "processed")):
-                os.makedirs(os.path.join(args.ACAR_DET_SAVE_DIR, "processed"))
-            args.det_save_dir = args.ACAR_DET_SAVE_DIR
-            log_file = open(os.path.join(args.det_save_dir, "processed/frame-level-result.log"), "a", 10)
-            args.det_file_name = os.path.join(args.det_save_dir, "processed/frame-level-dets.pkl")
-            result_file = os.path.join(args.det_save_dir, "processed/frame-ap-results.json")
-        else:
-            log_file = open("{pt:s}/frame-level-resutls-{it:06d}-{sq:02d}-{n:d}.log".format(pt=args.SAVE_ROOT, it=epoch, sq=args.TEST_SEQ_LEN, n=int(100*args.GEN_NMS)), "a", 10)
-            args.det_save_dir = os.path.join(args.SAVE_ROOT, "detections-{it:02d}-{sq:02d}-{n:d}/".format(it=epoch, sq=args.TEST_SEQ_LEN, n=int(100*args.GEN_NMS)))
-            args.det_file_name = "{pt:s}/frame-level-dets-{it:02d}-{sq:02d}-{n:d}.pkl".format(pt=args.SAVE_ROOT, it=epoch, sq=args.TEST_SEQ_LEN, n=int(100*args.GEN_NMS))
-            result_file = "{pt:s}/frame-ap-results-{it:02d}-{sq:02d}-{n:d}.json".format(pt=args.SAVE_ROOT, it=epoch, sq=args.TEST_SEQ_LEN,n=int(100*args.GEN_NMS))
-        
-        if args.JOINT_4M_MARGINALS:
-            log_file = open("{pt:s}/frame-level-resutls-{it:06d}-{sq:02d}-{n:d}-j4m.log".format(pt=args.SAVE_ROOT, it=epoch, sq=args.TEST_SEQ_LEN, n=int(100*args.GEN_NMS)), "a", 10)
-            args.det_file_name = "{pt:s}/frame-level-dets-{it:02d}-{sq:02d}-{n:d}-j4m.pkl".format(pt=args.SAVE_ROOT, it=epoch, sq=args.TEST_SEQ_LEN, n=int(100*args.GEN_NMS))
-            result_file = "{pt:s}/frame-ap-results-{it:02d}-{sq:02d}-{n:d}-j4m.json".format(pt=args.SAVE_ROOT, it=epoch, sq=args.TEST_SEQ_LEN,n=int(100*args.GEN_NMS))
-        
+    if args.MODE == 'eval_external':
+        if not os.path.exists(os.path.join(args.ACAR_DET_SAVE_DIR, "processed")):
+            os.makedirs(os.path.join(args.ACAR_DET_SAVE_DIR, "processed"))
+        args.det_save_dir = args.ACAR_DET_SAVE_DIR
+        log_file = open(os.path.join(args.det_save_dir, "processed/frame-level-result.log"), "a", 10)
+        args.det_file_name = os.path.join(args.det_save_dir, "processed/frame-level-dets.pkl")
+        result_file = os.path.join(args.det_save_dir, "processed/frame-ap-results.json")
+    
+    doeval = True
+    if not os.path.isfile(args.det_file_name):
+        logger.info('Gathering detection for ' + args.det_file_name)
+        gather_framelevel_detection(args, val_dataset)
+        logger.info('Done Gathering detections')
         doeval = True
-        if not os.path.isfile(args.det_file_name):
-            logger.info('Gathering detection for ' + args.det_file_name)
-            gather_framelevel_detection(args, val_dataset)
-            logger.info('Done Gathering detections')
-            doeval = True
-        else:
-            logger.info('Detection will be loaded: ' + args.det_file_name)
-        
-        if args.MODE != "eval_external":
-            if args.DATASET == 'road':
-                label_types =  args.label_types + ['av_actions']
-            elif args.DATASET == 'ucf24':
-                label_types = args.label_types + ['frame_actions']
-            else:
-                label_types = args.label_types
+    else:
+        logger.info('Detection will be loaded: ' + args.det_file_name)
+    
+    if args.MODE != "eval_external":
+        if args.DATASET == 'road':
+            label_types =  args.label_types + ['av_actions']
+        elif args.DATASET == 'ucf24':
+            label_types = args.label_types + ['frame_actions']
         else:
             label_types = args.label_types
+    else:
+        label_types = args.label_types
 
-        if doeval or not os.path.isfile(result_file):
-            results = {}
-            
-            for subset in args.SUBSETS:
-                if len(subset)<2:
-                    continue
-
-                sresults = evaluate_frames(val_dataset.anno_file, args.det_file_name, subset, iou_thresh=0.5, dataset=args.DATASET,mode = args.MODE)
-                for _, label_type in enumerate(label_types):
-                    name = subset + ' & ' + label_type
-                    rstr = '\n\nResults for ' + name + '\n'
-                    logger.info(rstr)
-                    log_file.write(rstr+'\n')
-                    results[name] = {'mAP': sresults[label_type]['mAP'], 'APs': sresults[label_type]['ap_all']}
-                    for ap_str in sresults[label_type]['ap_strs']:
-                        logger.info(ap_str)
-                        log_file.write(ap_str+'\n')
-                        
-                with open(result_file, 'w') as f:
-                    json.dump(results, f)
+    if doeval or not os.path.isfile(result_file):
+        results = {}
         
+        for subset in args.SUBSETS:
+            if len(subset)<2:
+                continue
+
+            sresults = evaluate_frames(val_dataset.anno_file, args.det_file_name, subset, iou_thresh=0.5, dataset=args.DATASET,mode = args.MODE)
+            for _, label_type in enumerate(label_types):
+                name = subset + ' & ' + label_type
+                rstr = '\n\nResults for ' + name + '\n'
+                logger.info(rstr)
+                log_file.write(rstr+'\n')
+                results[name] = {'mAP': sresults[label_type]['mAP'], 'APs': sresults[label_type]['ap_all']}
+                for ap_str in sresults[label_type]['ap_strs']:
+                    logger.info(ap_str)
+                    log_file.write(ap_str+'\n')
+                    
+            with open(result_file, 'w') as f:
+                json.dump(results, f)
+    

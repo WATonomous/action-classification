@@ -1,8 +1,8 @@
-evaluate: False
+evaluate: True
 result_path: ./output/text # same for any experiment in dvc world
 tensorboard_path: ./output/tensorboard
-model_path: ./output/saved_models # where the model is saved
-# resume_path: ckpt_3.pth.tar # path of the saved checkpoint starting from model_path
+model_path: ./pretrained/saved_models/tube_robust # where the model is saved
+resume_path: 0.1_drop_best.pth.tar # path of the saved checkpoint starting from model_path
 manual_seed: 1
 print_freq: 20
 dataset: "road" #always road, for both normal acar and tube_acar
@@ -115,8 +115,8 @@ val:
     # Maxes all ram and about half of GPUs on thor
     # batch_size: 24
     # workers: 20
-    batch_size: 8
-    workers: 8
+    batch_size: 20
+    workers: 20
     
     augmentation:
         spatial:
@@ -138,6 +138,6 @@ val:
 
     with_label: True # when this is True, eval loss is calculated and logged.
     eval_mAP:
-        save_json: False # when this value is True, ACAR will output a json file of ROAD format with action ids appended onto the bboxes
+        save_json: True # when this value is True, ACAR will output a json file of ROAD format with action ids appended onto the bboxes
         labelmap: /road/road_trainval_v1.0.json
         groundtruth: /road/road_trainval_v1.0.json
