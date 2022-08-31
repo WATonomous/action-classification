@@ -92,6 +92,8 @@ class ROADDebugVideo(object):
 
         # build video frame by frame
         for img_idx in list(range(video_length)):
+            if img_idx == 0: continue
+            
             progress.update()
             idx = img_idx + 1
 

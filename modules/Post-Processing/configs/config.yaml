@@ -2,6 +2,9 @@
 ANNO_PATH: '/road/road_trainval_v1.0.json'
 IMG_PATH: '/road/rgb-images'
 DATASET: 'road'
+SUBSETS: ['val_1']
+CLASSWISE_NMS: False
+TOPK: 10
 
 # wtf
 MIN_SIZE: 512
@@ -20,7 +23,5 @@ formatting:
 
 EVAL_EPOCHS: '30'
 MODE: "eval_external"
-ACAR_DET_SAVE_DIR: './output/acar'
+ACAR_DET_SAVE_DIR: './output/pickle_dets'
 SAVE_ROOT: ''
-LABEL_TYPES:
-SUBSETS:

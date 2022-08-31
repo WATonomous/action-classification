@@ -363,7 +363,7 @@ class VideoDataset(tutils.data.Dataset):
                 skip_step=1, full_test=False):
 
         self.DATASET = args.DATASET
-        self.SUBSETS = ['val_1', 'val_2', 'val_3']
+        self.SUBSETS = args.SUBSETS
         self.SEQ_LEN = args.SEQ_LEN
         self.BATCH_SIZE = args.BATCH_SIZE
         self.MIN_SEQ_STEP = args.MIN_SEQ_STEP

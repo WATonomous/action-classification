@@ -17,7 +17,7 @@ import torch
 from PIL import Image
 try:
     import accimage
-except ImportError:
+except ModuleNotFoundError:
     accimage = None
 
 

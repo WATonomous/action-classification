@@ -108,7 +108,7 @@ class ROAD(data.Dataset):
             See TemporalCenterRetentionCrop, by default None
         """
         self.data = [] # holds all frames in the dataset
-        self.valid_tube_indices = []# holds all indices of valid frames
+        self.valid_tube_indices = [] # holds all indices of valid tubes
         self.fps = 12
         self.action_counts = defaultdict(int)
         self.total_boxes = 0
@@ -142,10 +142,6 @@ class ROAD(data.Dataset):
                 continue
 
             for frame in ann_dict['db'][video]['frames'].values():
-                # any frame that contains annotations is a training/val point
-                if not frame['annotated'] or len(frame['annos']) == 0:
-                    continue
-
                 # Let's use this frame as a training/val point
                 # First we compute the information we need to create a clip from this datapoint.
                 frame_id = int(frame['input_image_id'])
@@ -181,7 +177,7 @@ class ROAD(data.Dataset):
                         'bbox_id': bbox_id,
                         'label': annon['action_ids']})
 
-                if n_frames == self.num_frames_in_clip:
+                if n_frames == self.num_frames_in_clip and len(labels) > 0:
                     self.valid_tube_indices.append(len(self.data))
 
                 self.data.append({
@@ -221,6 +217,8 @@ class ROAD(data.Dataset):
         '''
         action_classes = list(range(outputs.shape[1]))
         for k in range(num_rois):
+            if not self.w_ann_dict['db'][video_name[k]]['frames'][frame_time[k]]['annotated']: continue
+
             self.w_ann_dict['db'][video_name[k]]['frames'][frame_time[k]]['annos'][bbox_ids[k]]['action_scores']  = {}
 
             for cls in action_classes:
@@ -291,7 +289,6 @@ class ROAD(data.Dataset):
 
         clip = []
         for i in range(len(frame_indices)):
-
             clip_labels.append([label for label in self.data[index + frame_indices[i]]['labels']
                                 if label['tube_uid'] in keyframe_tube_uids])
 

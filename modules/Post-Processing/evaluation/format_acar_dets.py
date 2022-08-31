@@ -61,7 +61,10 @@ def format_acar_dets(opts):
     for video_name, video in ann_dict['db'].items():
         print(video_name)
         for frame_num, frame_data in tqdm(video['frames'].items()):
+            if not frame_data['annotated']: continue
+
             annos = frame_data['annos']
+            
             if int(frame_num) < 50 or int(frame_num) > 5940: continue
 
             save_data = {'main': np.zeros((len(annos), 23))}

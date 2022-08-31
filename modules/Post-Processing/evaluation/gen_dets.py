@@ -228,8 +228,8 @@ def gather_framelevel_detection(args, val_dataset):
                     detections['frame_actions'][videoname+frame_name] = dets['ego']
             frame_dets = dets['main']
             
-            if args.JOINT_4M_MARGINALS:
-                frame_dets = make_joint_probs_from_marginals(frame_dets, val_dataset.childs, args.num_classes_list)
+            # if args.JOINT_4M_MARGINALS:
+            #     frame_dets = make_joint_probs_from_marginals(frame_dets, val_dataset.childs, args.num_classes_list)
             
             start_id = 4
             for l, ltype in enumerate(args.label_types):
@@ -257,15 +257,15 @@ def get_ltype_dets(frame_dets, start_id, numc, ltype, args):
                 cls_dets = utils.filter_detections(args, torch.from_numpy(scores), torch.from_numpy(boxes))
             elif pickn<= args.TOPK+15:
                 cls_dets = np.hstack((boxes[:pickn,:], scores[:pickn, np.newaxis]))
-                if not args.JOINT_4M_MARGINALS:
-                    cls_dets = cls_dets[scores>args.CONF_THRESH,:]
+                # if not args.JOINT_4M_MARGINALS:
+                #     cls_dets = cls_dets[scores>args.CONF_THRESH,:]
             else:
                 sorted_ind = np.argsort(-scores)
                 sorted_ind = sorted_ind[:args.TOPK+15]
                 cls_dets = np.hstack((boxes[sorted_ind,:], scores[sorted_ind, np.newaxis]))
                 scores = scores[sorted_ind]
-                if not args.JOINT_4M_MARGINALS:
-                    cls_dets = cls_dets[scores>args.CONF_THRESH,:]
+                # if not args.JOINT_4M_MARGINALS:
+                #     cls_dets = cls_dets[scores>args.CONF_THRESH,:]
         else:
             cls_dets = np.asarray([])
         dets.append(cls_dets)

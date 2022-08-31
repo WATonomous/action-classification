@@ -32,6 +32,13 @@ def main(args):
 
     val_dataset = VideoDataset(opt, train=False, transform=val_transform, skip_step=skip_step, full_test=True)
 
+    opt.label_types = val_dataset.label_types
+    opt.num_label_types = val_dataset.num_label_types
+    opt.all_classes =  val_dataset.all_classes
+    opt.num_classes_list = val_dataset.num_classes_list
+    opt.num_ego_classes = val_dataset.num_ego_classes
+    opt.ego_classes = val_dataset.ego_classes
+
     format_acar_dets(opt.formatting)
     eval_framewise_dets(opt, val_dataset)
     build_eval_tubes(opt, val_dataset)    

@@ -23,10 +23,13 @@ RUN pip install \
 	'iopath<0.1.9,>=0.1.7' \
 	tqdm>=4.29.0 \ 
 	motmetrics \ 
-	filterpy  
+	filterpy \
+	easydict
 
 # separate because it doesn't wanna be part of his friends (module 'numpy' not found error)
 RUN pip install lap 
+
+RUN pip install torch==1.10.0+cu111 torchvision==0.11.0+cu111 pytorchvideo -f https://download.pytorch.org/whl/cu111/torch_stable.html
 
 WORKDIR /project/OC-SORT
 
