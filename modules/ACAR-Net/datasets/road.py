@@ -141,10 +141,10 @@ class ROAD(data.Dataset):
             if self.split not in ann_dict['db'][video]['split_ids']:
                 continue
 
-            for frame in ann_dict['db'][video]['frames'].values():
+            for frame_id, frame in ann_dict['db'][video]['frames'].items():
                 # Let's use this frame as a training/val point
                 # First we compute the information we need to create a clip from this datapoint.
-                frame_id = int(frame['input_image_id'])
+                frame_id = int(frame_id)
                 # suppose this current frame is treated as the center frame of a clip.
                 # note that the frames are expected to be 1-indexed in the annotation file.
                 # index of the frame in the video.
@@ -156,6 +156,11 @@ class ROAD(data.Dataset):
                 n_frames = clip_end_frame - clip_start_frame + 1
 
                 # then we gather all label information in this frame.
+                try:
+                    frame['annos']
+                except KeyError:
+                    frame['annos'] = {}
+
                 labels = []
                 for bbox_id, annon in frame['annos'].items():
                     for action_id in annon['action_ids']:

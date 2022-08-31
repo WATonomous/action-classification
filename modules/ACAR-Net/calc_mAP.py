@@ -90,7 +90,7 @@ def read_csv(csv_file, class_whitelist=None, capacity=0):
     print_time("read file " + csv_file.name, start)
     return boxes, labels, scores
 
-def read_json(json_file, class_whitelist=None, load_score=False):
+def read_json(val_split, json_file, class_whitelist=None, load_score=False):
     """Loads boxes and class labels from a CSV file in the AVA format.
     CSV file format described at https://research.google.com/ava/download.html.
     Args:
@@ -112,7 +112,7 @@ def read_json(json_file, class_whitelist=None, load_score=False):
     ann_dict = json.load(json_file)
     for video in ann_dict['db'].keys():
         # filter ground-truth of validation set only
-        if 'val_1' not in ann_dict['db'][video]['split_ids']:
+        if val_split not in ann_dict['db'][video]['split_ids']:
             continue
         for frame in ann_dict['db'][video]['frames'].values():
             # only load ground-truth of annotated frames
@@ -162,7 +162,7 @@ def read_labelmap(json_file):
     return labelmap, class_ids
 
 
-def run_evaluation(labelmap, groundtruth, detections, exclusions, logger):
+def run_evaluation(opt, labelmap, groundtruth, detections, exclusions, logger):
     """Runs evaluations given input files.
 
     Args:
@@ -180,7 +180,7 @@ def run_evaluation(labelmap, groundtruth, detections, exclusions, logger):
         categories)
 
     # Reads the ground truth data.
-    gt_boxes, gt_labels, _ = read_json(groundtruth, class_whitelist, 0)
+    gt_boxes, gt_labels, _ = read_json(opt.val_split, groundtruth, class_whitelist, 0)
 
     # Reads detections data.
     pred_boxes, pred_labels, pred_scores = read_csv(detections, class_whitelist, 50)

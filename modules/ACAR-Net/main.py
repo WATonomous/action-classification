@@ -138,7 +138,7 @@ def main(local_rank, args):
                 opt.train.root_path,
                 opt.train.annotation_path, 
                 opt.train.class_idx_path,
-                "train_2",
+                opt.data.train_split,
                 False,
                 spatial_transform,
                 temporal_transform,
@@ -229,7 +229,7 @@ def main(local_rank, args):
             opt.val.root_path,
             opt.val.annotation_path,
             opt.val.class_idx_path,
-            "val_2",
+            opt.data.val_split,
             opt.val.eval_mAP.save_json,
             spatial_transform,
             temporal_transform,
@@ -582,6 +582,7 @@ def val_epoch(epoch, data_loader, model, criterion, act_func,
                         of.writelines(f.readlines())
 
             metrics = run_evaluation(
+                opt.data,
                 open(eval_mAP.labelmap, 'r'), 
                 open(eval_mAP.groundtruth, 'r'),
                 open(result_file, 'r'),
