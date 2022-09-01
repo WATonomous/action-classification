@@ -533,7 +533,13 @@ def val_epoch(epoch, data_loader, model, criterion, act_func,
                                                     bboxes[k][2], bboxes[k][3])
                 for cls in range(outputs.shape[1]):
                     score_str = '%.3f'%outputs[k][cls]
-                    out_file.write(prefix + ",%d,%s,%s\n" % (idx_to_class[cls]['id'], score_str, int(tube_uids[k])))
+                    
+                    try:
+                        tube_id = int(tube_uids[k])
+                    except ValueError:
+                        tube_id = tube_uids[k]
+
+                    out_file.write(prefix + ",%d,%s,%s\n" % (idx_to_class[cls]['id'], score_str, tube_id))
                     # out_file.write(prefix + ",%d,%s\n" % (idx_to_class[cls]['id'], score_str))
 
         batch_time.update(time.time() - end_time)
