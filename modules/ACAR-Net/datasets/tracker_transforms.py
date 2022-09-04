@@ -32,7 +32,7 @@ class RandomBBoxDrop(object):
             f_labels_len = len(f_labels)
             j = 0
             while j < f_labels_len:
-                if random.random() <= self.drop_rate:
+                if random.random() < self.drop_rate:
                     try:
                         del clip_labels[i][j] 
                         f_labels_len -= 1

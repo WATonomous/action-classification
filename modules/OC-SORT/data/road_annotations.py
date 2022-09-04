@@ -111,8 +111,11 @@ class ROADOCSORT(data.Dataset):
             ''' 
             for idx, online_target in enumerate(online_targets):
                 # Deletes the annos key-value pair to free up space for the track detections
-                self.ann_dict['db'][video_key]['frames'][str(idx+1)]['annotated'] = \
-                    self.gt_dict['db'][video_key]['frames'][str(idx+1)]['annotated']
+                try:
+                    self.ann_dict['db'][video_key]['frames'][str(idx+1)]['annotated'] = \
+                        self.gt_dict['db'][video_key]['frames'][str(idx+1)]['annotated']
+                except KeyError: # this is for when we create tubes for the test set
+                    self.ann_dict['db'][video_key]['frames'][str(idx+1)]['annotated'] = 1
 
                 if not self.ann_dict['db'][video_key]['frames'][str(idx+1)]['annotated']:
                     continue

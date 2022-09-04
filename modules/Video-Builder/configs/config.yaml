@@ -1,16 +1,15 @@
 list_videos: True # lists the available videos to build annotations on
-video_name: '2014-11-21-16-07-03_stereo_centre_01' # name of the video to build annotations on
+video_name: '2014-06-26-09-31-18_stereo_centre_02' # name of the video to build annotations on
 
 Detector:
   # path to the detection annotations, leave empty if not wanted
   # detections_path: '/road/flow_color_model_fpn_x101_64x4d_finetune_val1_detections_inactive_merged_gt_format_0.1_new.json'
-  detections_path: '/road/detections/eval/flow_color_model_fpn_x101_64x4d_finetune_val2_detections_inactive_merged_val2_gt_format_0.1.json'
+  detections_path: '/road/detections/eval/detection_results_on_test_set_epoch_7_gt_format_0.1.jsonl'
 
 Tracker:
   # path to annotations with tracks in them, leave empty if not wanted
   # tracks_path: '/road/flow_color_model_fpn_x101_64x4d_finetune_val1_detections_inactive_merged_gt_format_0.1_new_ocsort.json'
-  tracks_path: '/road/detections/eval/flow_color_model_fpn_x101_64x4d_finetune_val2_detections_inactive_merged_val2_gt_format_0.1_ocsort.json'
-
+  tracks_path: '/road/detections/eval/detection_results_on_test_set_epoch_7_gt_format_0.1_ocsort.json'
 
   # NOTE: THESE PARAMS NEED TO BE SET YOURSELF, IF THE TRACKER CONFIG CHANGES, THEN CHECK THAT THESE PARAMS 
   # ARE ACCURATE BEFORE BUILDING THE VIDEO
@@ -27,7 +26,7 @@ Action_Classifier:
   action_thresh: 0.05 # This is the threshold with which an action is drawn onto the frame
 
 Video_Builder:
-  video_path: '/road/rgb-images' # path to all the video rgb images
+  video_path: '/road/rgb-images-testset' # path to all the video rgb images
   save_path: '/project/Video-Builder/output' # where the debug video should be loaded to
 
 Video_Formatting:
