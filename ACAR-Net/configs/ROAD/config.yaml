@@ -2,7 +2,7 @@ evaluate: True
 result_path: ./output/text # same for any experiment in dvc world
 tensorboard_path: ./output/tensorboard
 model_path: ./output/saved_models # where the model is saved
-resume_path: ckpt_6.pth.tar # path of the saved checkpoint starting from model_path
+resume_path: # this is the checkpoint file produced by the model
 manual_seed: 1
 print_freq: 20
 dataset: "road" #always road, for both normal acar and tube_acar
