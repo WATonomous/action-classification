@@ -1,0 +1,6 @@
+[submodule "modules/mmdetection"]
+	path = modules/mmdetection
+	url = https://github.com/WATonomous/mmdetection
+[submodule "modules/3D-RetinaNet"]
+	path = modules/3D-RetinaNet
+	url = https://github.com/WATonomous/3D-RetinaNet
