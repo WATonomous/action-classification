@@ -6,7 +6,7 @@ services:
       dockerfile: acar.Dockerfile
     image: git.uwaterloo.ca:5050/watonomous/registry/action-classification/acar
     volumes:
-      - /mnt/wato-drive/road:/road
+      - /path/to/road/data:/road
       - ./modules/ACAR-Net:/project/ACAR-Net
     ipc: host
     tty: true
@@ -24,7 +24,7 @@ services:
       dockerfile: ocsort.Dockerfile
     image: git.uwaterloo.ca:5050/watonomous/registry/action-classification/ocsort
     volumes:
-      - /mnt/wato-drive/road:/road
+      - /path/to/road/data:/road
       - ./modules/OC-SORT:/project/OC-SORT
     ipc: host
     tty: true
@@ -35,7 +35,7 @@ services:
       dockerfile: builder.Dockerfile
     image: git.uwaterloo.ca:5050/watonomous/registry/action-classification/video-builder
     volumes:
-      - /mnt/wato-drive/road:/road
+      - /path/to/road/data:/road
       - ./modules/Video-Builder:/project/Video-Builder
     ipc: host
     tty: true
@@ -46,7 +46,7 @@ services:
       dockerfile: post.Dockerfile
     image: git.uwaterloo.ca:5050/watonomous/registry/action-classification/post-processing
     volumes:
-      - /mnt/wato-drive/road:/road
+      - /path/to/road/data:/road
       - ./modules/Post-Processing:/project/Post-Processing
     ipc: host
     tty: true

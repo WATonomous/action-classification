@@ -8,7 +8,7 @@ Dockerized Research Repository for Action Classification.
 
 1. `docker compose build`
 2. `docker compose up <service>`, where the services include our action classifier, tracker, video builder, post-processing techniques, and parts of our evaluation scheme.
-3. `docker exec -it <service> /bin/bash` to begin developing in the container
+3. `docker exec -it <service> /bin/bash` to begin developing in the container. Note, code is ran using `python main.py --config /path/to/config.yml`. Please refer to each module's README for more details.
 
 ## Repo Structure
 Most components are dockerized, we transfer data between each of the components via JSON files and CSVs.
