@@ -1,4 +1,4 @@
-FROM python:3.8.13-bullseye
+FROM pure/python:3.8-cuda10.2-base
 WORKDIR /project
 
 # cv2 dependencies
@@ -17,8 +17,11 @@ RUN pip install \
 	termcolor \
 	Pillow \
     av \
-	ffmpeg \
 	moviepy \
-	tqdm>=4.29.0 
+	tqdm>=4.29.0 \
+    scipy \
+	pandas
 
-WORKDIR /project/Video-Builder
+RUN pip install torch==1.10.0+cu111 torchvision==0.11.0+cu111 pytorchvideo -f https://download.pytorch.org/whl/cu111/torch_stable.html
+
+WORKDIR /project/Post-Processing

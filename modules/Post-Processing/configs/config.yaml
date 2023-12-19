@@ -1,0 +1,27 @@
+# args I know
+ANNO_PATH: '/road/road_trainval_v1.0.json'
+IMG_PATH: '/road/rgb-images'
+DATASET: 'road'
+SUBSETS: ['val_1']
+CLASSWISE_NMS: False
+TOPK: 10
+
+# wtf
+MIN_SIZE: 512
+MILESTONES: '20,25'
+SEQ_LEN: 8
+
+# random params which make the val dataset work
+BATCH_SIZE: 4
+MIN_SEQ_STEP: 1
+MAX_SEQ_STEP: 1
+
+formatting:
+  prediction_path: '/road/flow_color_model_fpn_x101_64x4d_finetune_val1_detections_inactive_merged_gt_format_0.1_new_ocsort_acar.json'
+  # prediction_path: '/road/tube_robust_30_01.csv'
+  save_pickles_path: './output/pickle_dets'
+
+EVAL_EPOCHS: '30'
+MODE: "eval_external"
+ACAR_DET_SAVE_DIR: './output/pickle_dets'
+SAVE_ROOT: ''

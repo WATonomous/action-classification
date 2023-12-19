@@ -1,0 +1,41 @@
+progress: True # track progress
+save_tubes: True # generated tubes are saved in a separate annotation file in the same directory as the original, we append '_ocsort' to the annotation name
+
+Evaluation:
+  evaluate: False # do you want to compare generated tubes to the tubes labeled by ROAD?
+  evaluation_path: '/road/road_trainval_v1.0.json' # path to the ROAD ground truth annotations
+
+Data: 
+  # This is for Detections coming out of the detector
+  annotation_path: '/road/detections/eval/detection_results_on_test_set_epoch_7_gt_format_0.1.jsonl'
+  ground_truth: False
+  ground_truth_path: '/road/road_trainval_v1.0.json' # this must be added if ground_truth: False
+  match_actions: False
+  give_video_names: False 
+
+  # annotation_path: /road/road_trainval_v1.0.json # path to the annotation file
+  # ground_truth: True # are these annotations the ROAD ground truth annotations
+  # match_actions: True # if ground truth data is given, should we also save the actions? This is very inefficient
+  # give_video_names: True # main.py will display a list of possible video names to build debug video on
+  
+  action_matching_thresh: 1e-5 # matching threshold for matching a track with their action
+
+OCSORT: # OCSORT parameters
+  det_thresh: 0.5 # threshold for first round matching, detections for second matching are self.det_thresh > score > 0.1
+  max_age: 30 # max number of frames in which an object can be gone until that track is considered dead
+  min_hits: 3 # minimum number of times a detection must be hit until a track is formed (~vague, should look into)
+  iou_threshold: 0.3 # IOU between detection candidates and tracked detection for second round matching
+
+  delta_t: 3 # delta t, this is used for the Kalmann Filter
+  inertia: 0.2 # inertia, this is use for the Kalmann Filter
+
+  # We support multiple ways for association cost calculation, by default
+  # we use IoU. GIoU may have better performance in some situations. We note 
+  # that we hardly normalize the cost by all methods to (0,1) which may not be 
+  # the best practice.
+
+  # ASSO_FUNCS = iou, giou, ciou, diou, ct_dist (check ocsort.py for how these functions specifically work)
+
+  asso_func: "iou" 
+  
+  use_byte: False # use BYTE tracker as second of association by OCR
