@@ -1,17 +1,14 @@
 # ROAD Dataset Research
 
-Repo for training on the ROAD dataset.
+Repository for Action Classification.
 
-## [Baseline (3D-RetinaNet)](https://github.com/gurkirt/3D-RetinaNet)
+### [Baseline (3D-RetinaNet)](https://github.com/gurkirt/3D-RetinaNet)
 
-### Getting Started
+## Getting Started
 
-1. Set up the [ROAD Dataset](./scripts/road-data) and [kinetics-pt](./scripts/kinetics-pt)
-1. Test the training script
-   ```bash
-   sbatch scripts/retina-job-test.sh
-   ```
-1. Start training (configuration can be found in the training script)
-   ```bash
-   sbatch scripts/retina-job.sh
-   ```
+1. `docker compose build`
+2. `docker compose up <service>`, where the services include our action classifier, tracker, video builder, and parts of our evaluation scheme.
+3. `docker exec -it <service> /bin/bash` to begin developing in the container
+
+## Repo Structure
+Each component is dockerized, we transfer data between each of the components via JSON files and CSVs.
