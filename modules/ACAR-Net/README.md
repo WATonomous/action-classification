@@ -1,3 +1,5 @@
+Forked from: https://github.com/Siyu-C/ACAR-Net
+
 # [CVPR 2021] Actor-Context-Actor Relation Network for Spatio-temporal Action Localization
 This repository gives the official PyTorch implementation of [Actor-Context-Actor Relation Network for Spatio-temporal Action Localization](https://arxiv.org/pdf/2006.07976.pdf) (CVPR 2021) - 1st place solution of [AVA-Kinetics Crossover Challenge 2020](https://research.google.com/ava/challenge.html).
 This codebase also provides a general pipeline for training and evaluation on AVA-style datasets, as well as state-of-the-art action detection models.
