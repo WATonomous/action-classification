@@ -2,6 +2,7 @@ from collections import defaultdict
 from PIL import Image
 import os
 import json
+import copy
 
 import torch
 import torch.utils.data as data
@@ -42,13 +43,17 @@ class ROADDataLoader(data.DataLoader):
         filenames = [_['video_name'] for _ in batch]
         labels = [_['label'] for _ in batch]
         mid_times = [_['mid_time'] for _ in batch]
+        bbox_ids = [_['bbox_id_frame'] for _ in batch]
+        tube_uids = [_['tube_uid_frame'] for _ in batch]
 
         output = {
             'clips': clips,
             'aug_info': aug_info,
             'filenames': filenames,
             'labels': labels,
-            'mid_times': mid_times
+            'mid_times': mid_times,
+            'bbox_ids': bbox_ids,
+            'tube_uids': tube_uids
         }
         return output
 
@@ -59,6 +64,7 @@ class ROAD(data.Dataset):
                  annotation_path,
                  class_idx_path,
                  split,
+                 save_json=False,
                  spatial_transform=None,
                  temporal_transform=None):
         """
@@ -123,6 +129,10 @@ class ROAD(data.Dataset):
         self.spatial_transform = spatial_transform
         self.temporal_transform = temporal_transform
 
+        if save_json:
+            self.annotation_path = annotation_path
+            self.w_ann_dict = copy.deepcopy(ann_dict)
+
     def load_data_split(self, ann_dict):
         for video in ann_dict['db'].keys():
             if self.split not in ann_dict['db'][video]['split_ids']:
@@ -148,7 +158,7 @@ class ROAD(data.Dataset):
 
                 # then we gather all label information in this frame.
                 labels = []
-                for annon in frame['annos'].values():
+                for bbox_id, annon in frame['annos'].items():
                     for action_id in annon['action_ids']:
                         self.action_counts[action_id] += 1
                     if 'tube_uid' not in annon:
@@ -163,6 +173,7 @@ class ROAD(data.Dataset):
                     labels.append({
                         'tube_uid': tube_uid,
                         'bounding_box': annon['box'],
+                        'bbox_id': bbox_id,
                         'label': annon['action_ids']})
 
                 if n_frames == self.num_frames_in_clip:
@@ -180,12 +191,36 @@ class ROAD(data.Dataset):
                 })
 
         # track and print data distribution for potential debugging purposes
-        print("Data Distribution by action class:")
+        print("Data Distribution by Action Class:")
         for k, v in self.action_counts.items():
             print(self.idx_to_class[k], v)
 
         print("valid tube indices:", len(self.valid_tube_indices))
         print("total datapoints:", len(self.data))
+
+    def write_to_json(self):
+        ''' Dumps annotation dictionary into the desire json file
+        '''
+        anno_name = os.path.splitext(self.annotation_path)[0]
+        new_annotation_path = os.path.join(self.annotation_path, '..', anno_name + '_acar.json')
+
+        if hasattr(self, 'w_ann_dict'):
+            with open(new_annotation_path, "w") as json_writer: # writer for the new anno dict file 
+                json.dump(self.w_ann_dict, json_writer)
+        else:
+            raise RuntimeError('write_to_json called but no writer was present')
+    
+    def write_actions(self, outputs, video_name, frame_time, bbox_ids, num_rois):
+        ''' Appends action labels onto their respective bbox in the given frame
+        '''
+        action_classes = list(range(outputs.shape[1]))
+        for k in range(num_rois):
+            self.w_ann_dict['db'][video_name[k]]['frames'][frame_time[k]]['annos'][bbox_ids[k]]['action_scores']  = {}
+
+            for cls in action_classes:
+                score = float(outputs[k][cls])
+                self.w_ann_dict['db'][video_name[k]]['frames'][frame_time[k]]['annos'][bbox_ids[k]]['action_scores'][cls + 1] = score
+                
 
     def _spatial_transform(self, clip):
         if self.spatial_transform is not None:
@@ -216,6 +251,8 @@ class ROAD(data.Dataset):
                 in the frame, overall representing the labels of all frames in the tube.
             video_name: str, name of the video
             mid_time: str, frame_id of the key frame
+            bbox_id_frame: bbox ids of the key frame
+            tube_uid_frame: tube uids of the key frame
 
         Raises
         ------
@@ -243,6 +280,9 @@ class ROAD(data.Dataset):
             frame_indices = self.temporal_transform(frame_indices, 0)
             assert frame_indices.index(0) == (len(frame_indices) // 2) - 1
 
+        # get bbox_ids of the keyframe
+        keyframe_bbox_ids = [label['bbox_id'] for label in self.data[index]['labels']]
+
         clip = []
         for i in range(len(frame_indices)):
 
@@ -261,7 +301,8 @@ class ROAD(data.Dataset):
         clip, aug_info = self._spatial_transform(clip)
 
         return {'clip': clip, 'aug_info': aug_info, 'label': clip_labels,
-                'video_name': video_name, 'mid_time': mid_time}
+                'video_name': video_name, 'mid_time': mid_time, 'bbox_id_frame': keyframe_bbox_ids,
+                'tube_uid_frame': keyframe_tube_uids}
 
     def __len__(self):
         return len(self.valid_tube_indices)
@@ -280,13 +321,17 @@ class ROADmulticropDataLoader(ROADDataLoader):
         filenames = [_['video_name'] for _ in batch]
         labels = [_['label'] for _ in batch]
         mid_times = [_['mid_time'] for _ in batch]
+        bbox_ids = [_['bbox_id_frame'] for _ in batch]
+        tube_uids = [_['tube_uid_frame'] for _ in batch]
 
         output = {
             'clips': clips,
             'aug_info': aug_info,
             'filenames': filenames,
             'labels': labels,
-            'mid_times': mid_times
+            'mid_times': mid_times,
+            'bbox_ids': bbox_ids,
+            'tube_uids': tube_uids
         }
         return output
 

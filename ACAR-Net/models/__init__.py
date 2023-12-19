@@ -59,7 +59,7 @@ class AVA_model(nn.Module):
             
             if o_n['num_rois'] == 0:
                 continue
-            ids = o_n['bbox_ids']
+            ids = o_n['bbox_idxs']
                 
             i_h = {'features': o_b['features'], 'rois': o_n['rois'], 
                    'num_rois': o_n['num_rois'], 'roi_ids': o_n['roi_ids'],
@@ -78,7 +78,7 @@ class AVA_model(nn.Module):
                     output_list[id_i] += outputs[idx]
                 cnt_list[id_i] += 1
             
-        num_rois, filenames, mid_times, bboxes, targets, outputs = 0, [], [], [], [], []
+        num_rois, filenames, mid_times, bboxes, bbox_ids, tube_uids, targets, outputs = 0, [], [], [], [], [], [], []
         for idx in range(len(o['filenames'])):
             if cnt_list[idx] == 0:
                 continue
@@ -86,17 +86,19 @@ class AVA_model(nn.Module):
             filenames.append(o['filenames'][idx])
             mid_times.append(o['mid_times'][idx])
             bboxes.append(o['bboxes'][idx])
+            bbox_ids.append(o['bbox_ids'][idx])
+            tube_uids.append(o['tube_uids'][idx])
             targets.append(o['targets'][idx])
             outputs.append(output_list[idx] / float(cnt_list[idx]))
 
         if num_rois == 0:
             return {'outputs': None, 'targets': None, 'num_rois': 0, 
-                    'filenames': filenames, 'mid_times': mid_times, 'bboxes': bboxes}
+                    'filenames': filenames, 'mid_times': mid_times, 'bboxes': bboxes, 'bbox_ids': bbox_ids, 'tube_uids': tube_uids}
         
         final_outputs = torch.stack(outputs, dim=0)
         final_targets = torch.stack(targets, dim=0)
         return {'outputs': final_outputs, 'targets': final_targets, 'num_rois': num_rois, 
-                'filenames': filenames, 'mid_times': mid_times, 'bboxes': bboxes}
+                'filenames': filenames, 'mid_times': mid_times, 'bboxes': bboxes, 'bbox_ids': bbox_ids, 'tube_uids': tube_uids}
 
     def train(self, mode=True):
         super(AVA_model, self).train(mode)

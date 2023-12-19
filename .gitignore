@@ -1,3 +1,7 @@
+__pycache__/
+*.py[cod]
+*$py.class
+
 /scripts/road-data/instance_counts.json
 /scripts/road-data/road_trainval_v1.0.json
 /scripts/road-data/videos

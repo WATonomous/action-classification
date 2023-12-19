@@ -22,9 +22,11 @@ class BasicNeck(nn.Module):
     # returns: num_rois, rois, roi_ids, targets, sizes_before_padding, filenames, mid_times, bboxes, bbox_ids
     def forward(self, data):
         rois, roi_ids, targets, sizes_before_padding, filenames, mid_times = [], [0], [], [], [], []
-        bboxes, bbox_ids = [], []  # used for multi-crop fusion
+        bbox_ids = [] # used for associating actions to the bbox in the json annotation file
+        bboxes, bbox_idxs = [], []  # used for multi-crop fusion
+        tube_uids = [] # used for postprocessing
 
-        cur_bbox_id = -1  # record current bbox no.
+        cur_bbox_idx = -1  # record current bbox no.
         for idx in range(len(data['aug_info'])):
             aug_info = data['aug_info'][idx]
             pad_ratio = aug_info['pad_ratio']
@@ -35,7 +37,8 @@ class BasicNeck(nn.Module):
             mid_idx = (len(data['labels'][idx]) // 2) -1 
             keyframe_labels = data['labels'][idx][mid_idx]
             for label in keyframe_labels:
-                cur_bbox_id += 1
+                cur_bbox_idx += 1
+
                 if self.training and self.bbox_jitter is not None:
                     bbox_list = bbox_jitter(label['bounding_box'],
                                             self.bbox_jitter.get('num', 1),
@@ -53,7 +56,9 @@ class BasicNeck(nn.Module):
                     filenames.append(data['filenames'][idx])
                     mid_times.append(data['mid_times'][idx])
                     bboxes.append(label['bounding_box'])
-                    bbox_ids.append(cur_bbox_id)
+                    bbox_ids.append(label['bbox_id'])
+                    tube_uids.append(label['tube_uid'])
+                    bbox_idxs.append(cur_bbox_idx)
 
                     if self.multi_class:
                         ret = torch.zeros(self.num_classes)
@@ -69,13 +74,15 @@ class BasicNeck(nn.Module):
         if num_rois == 0:
             return {'num_rois': 0, 'rois': None, 'roi_ids': roi_ids, 'targets': None, 
                     'sizes_before_padding': sizes_before_padding,
-                    'filenames': filenames, 'mid_times': mid_times, 'bboxes': bboxes, 'bbox_ids': bbox_ids}
+                    'filenames': filenames, 'mid_times': mid_times, 'bboxes': bboxes, 'bbox_idxs': bbox_idxs, 
+                    'bbox_ids': bbox_ids, 'tube_uids': tube_uids}
         
         rois = torch.FloatTensor(rois).cuda()
         targets = torch.stack(targets, dim=0).cuda()
         return {'num_rois': num_rois, 'rois': rois, 'roi_ids': roi_ids, 'targets': targets, 
                 'sizes_before_padding': sizes_before_padding,
-                'filenames': filenames, 'mid_times': mid_times, 'bboxes': bboxes, 'bbox_ids': bbox_ids}
+                'filenames': filenames, 'mid_times': mid_times, 'bboxes': bboxes, 'bbox_idxs': bbox_idxs, 
+                'bbox_ids': bbox_ids, 'tube_uids': tube_uids}
 
     
 def basic(**kwargs):

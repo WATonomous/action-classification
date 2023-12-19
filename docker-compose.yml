@@ -7,10 +7,7 @@ services:
     image: git.uwaterloo.ca:5050/watonomous/registry/action-classification/acar
     volumes:
       - /mnt/wato-drive/road:/road
-      - ./:/project/action-classification
-      #- ../3D-RetinaNet:/project/3D-RetinaNet
-      #- ../road-dataset:/project/road-dataset
-      #- /proc:/host_proc
+      - ./ACAR-Net:/project/ACAR-Net
     ipc: host
     tty: true
     deploy:
@@ -21,4 +18,24 @@ services:
             device_ids: ['0', '1'] # Change to ['0', '1'] to use two GPUs
             capabilities: [gpu]
 
+  ocsort:
+    build:
+      context: .
+      dockerfile: ocsort.Dockerfile
+    image: git.uwaterloo.ca:5050/watonomous/registry/action-classification/ocsort
+    volumes:
+      - /mnt/wato-drive/road:/road
+      - ./OC-SORT:/project/OC-SORT
+    ipc: host
+    tty: true
 
+  builder:
+    build:
+      context: .
+      dockerfile: builder.Dockerfile
+    image: git.uwaterloo.ca:5050/watonomous/registry/action-classification/video-builder
+    volumes:
+      - /mnt/wato-drive/road:/road
+      - ./Video-Builder:/project/Video-Builder
+    ipc: host
+    tty: true
