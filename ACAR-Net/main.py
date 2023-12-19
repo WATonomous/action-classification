@@ -83,7 +83,7 @@ def main(local_rank, args):
         else:
             # put all command line args and options into wandb.config
             wandb_config = dict(command_line = vars(args), config_file = opt)
-            wandb.init(project='acar', name = opt.experiment_name, config = wandb_config, sync_tensorboard=True)
+            # wandb.init(project='acar', name = opt.experiment_name, config = wandb_config, sync_tensorboard=True)
         signal.signal(signal.SIGINT, handler)
         mkdir(opt.result_path)
         mkdir(os.path.join(opt.result_path, 'tmp'))
@@ -226,6 +226,7 @@ def main(local_rank, args):
             opt.val.annotation_path,
             opt.val.class_idx_path,
             "val_1",
+            opt.val.eval_mAP.save_json,
             spatial_transform,
             temporal_transform,
         )
@@ -475,6 +476,7 @@ def val_epoch(epoch, data_loader, model, criterion, act_func,
     
     calc_loss = opt.val.with_label
     save_pred = (opt.val.get('eval_mAP', None) is not None)
+
     if save_pred:
         out_file = open(os.path.join(opt.result_path, 'tmp', f'predict_rank_{rank}.csv'), 'w')
     
@@ -513,19 +515,22 @@ def val_epoch(epoch, data_loader, model, criterion, act_func,
             global_losses.update(loss.item(), num_rois)
 
         if save_pred:
-            fnames, mid_times, bboxes = ret['filenames'], ret['mid_times'], ret['bboxes']
+            eval_mAP = opt.val.eval_mAP
+            if eval_mAP.save_json:
+                fnames, mid_times, bbox_ids = ret['filenames'], ret['mid_times'], ret['bbox_ids']
+                outputs = act_func(outputs).cpu().data
+                data_loader.dataset.write_actions(outputs, fnames, mid_times, bbox_ids, num_rois)
+                
+            fnames, mid_times, bboxes, tube_uids = ret['filenames'], ret['mid_times'], ret['bboxes'], ret['tube_uids']
             outputs = act_func(outputs).cpu().data
             idx_to_class = data_loader.dataset.idx_to_class
             for k in range(num_rois):
                 prefix = "%s,%s,%.3f,%.3f,%.3f,%.3f"%(fnames[k], mid_times[k],
-                                                      bboxes[k][0], bboxes[k][1],
-                                                      bboxes[k][2], bboxes[k][3])
+                                                    bboxes[k][0], bboxes[k][1],
+                                                    bboxes[k][2], bboxes[k][3])
                 for cls in range(outputs.shape[1]):
                     score_str = '%.3f'%outputs[k][cls]
-                    # Hack: Trained with too many classes, ignore anything out of range
-                    if cls >= len(idx_to_class):
-                        break 
-                    out_file.write(prefix + ",%d,%s\n" % (idx_to_class[cls]['id'], score_str))
+                    out_file.write(prefix + ",%d,%s,%s\n" % (idx_to_class[cls]['id'], score_str, int(tube_uids[k])))
 
         batch_time.update(time.time() - end_time)
         end_time = time.time()
@@ -562,13 +567,16 @@ def val_epoch(epoch, data_loader, model, criterion, act_func,
             val_str += '\tLoss {:.4f}'.format(final_loss)
 
         if save_pred:
+            eval_mAP = opt.val.eval_mAP
+            if eval_mAP.save_json:
+                data_loader.dataset.write_to_json()
+                
             result_file = os.path.join(opt.result_path, f'predict_epoch_{epoch}.csv')
             with open(result_file, 'w') as of:
                 for r in range(world_size):
                     with open(os.path.join(opt.result_path, 'tmp', f'predict_rank_{r}.csv'), 'r') as f:
                         of.writelines(f.readlines())
 
-            eval_mAP = opt.val.eval_mAP
             metrics = run_evaluation(
                 open(eval_mAP.labelmap, 'r'), 
                 open(eval_mAP.groundtruth, 'r'),
