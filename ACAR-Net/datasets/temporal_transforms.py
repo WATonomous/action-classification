@@ -76,6 +76,60 @@ class TemporalCenterCrop(object):
         return '{self.__class__.__name__}(size={self.size}, step={self.step})'.format(self=self)
 
 
+class TemporalCenterRetentionCrop(object):
+    """Temporally crop the given frame indices at the center.
+    Retains the value of the center frame index passed in.
+
+    The number of frames coming in must be greater than the desired size
+
+    Args:
+        size (int): Desired output size of the crop.
+        step (int, optional): Stride when taking the crop.
+    """
+
+    def __init__(self, size, step=1):
+        self.size = size
+        self.step = step
+
+    def __call__(self, frame_indices, center_frame):
+        """
+        Args:
+            frame_indices (list): frame indices to be cropped.
+            center_frame (int): frame which will be retained 
+                (finds its index in frame_indices and crops around it)
+        Returns:
+            list: Cropped frame indices.
+        """
+
+        if len(frame_indices) < self.size:
+            raise Exception("The length of frame_indices is less than the desired size: {self.size}.".format(self=self))
+
+        center_index = frame_indices.index(center_frame)
+        begin_index = center_index - self.size // 2
+        end_index = center_index + self.size // 2
+
+        if begin_index < 0 or end_index >= len(frame_indices):
+            raise Exception("The chosen center frame cannot produce a full temporal crop of size: \
+                {self.size}. \n Center_Index: {center_index} \n Length of Frame_indices: {frame_indices} \
+                    \n Begin and End Index: ({begin}, {end})".format(
+                    self=self, 
+                    center_index=center_index, 
+                    frame_indices=len(frame_indices), 
+                    begin=begin_index,
+                    end=end_index
+                    ))
+
+        # crops frames in steps right of the center_index, starting at the center_index
+        out_right = frame_indices[center_index : end_index + 1 : self.step][1:]
+        # crops frames in steps left of the center_index, starting at the center_index
+        out_left = frame_indices[center_index : begin_index : -1][::self.step][::-1]
+
+        return out_left + out_right
+
+    def __repr__(self):
+        return '{self.__class__.__name__}(size={self.size}, step={self.step})'.format(self=self)
+
+
 class TemporalRandomCrop(object):
     """Temporally crop the given frame indices at a random location.
 

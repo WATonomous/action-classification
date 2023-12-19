@@ -1,9 +1,9 @@
+from collections import defaultdict
 from PIL import Image
 import os
 import pickle
 import json
 import numpy as np
-import io
 from iopath.common.file_io import g_pathmgr
 
 import torch
@@ -156,7 +156,7 @@ class AVADataLoader(data.DataLoader):
             datum['aug_info']['pad_ratio'] = pad_ratio
             aug_info.append(datum['aug_info'])
         filenames = [_['video_name'] for _ in batch]
-        labels = [_['label'] for _ in batch]
+        labels = [_['label'] for _ in batch] 
         mid_times = [_['mid_time'] for _ in batch]
         
         output = {
@@ -167,7 +167,6 @@ class AVADataLoader(data.DataLoader):
             'mid_times': mid_times
         }
         return output
-
     
 class AVA(data.Dataset):
     def __init__(self,
@@ -194,140 +193,27 @@ class AVA(data.Dataset):
         return clip, aug_info
 
     def __getitem__(self, index):
-        path = os.path.join(self.root_path, self.data[index]['video'])
-        frame_format = self.data[index]['format_str']
-        start_frame = self.data[index]['start_frame']
-        n_frames = self.data[index]['n_frames']
-        mid_time = str(self.data[index]['time'])
-        target = self.data[index]['labels']
-        video_name = self.data[index]['video']
-        
-        frame_indices = list(range(start_frame, start_frame + n_frames))
-        if self.temporal_transform is not None:
-            frame_indices = self.temporal_transform(frame_indices)
-        
-        clip = []
-        for i in range(len(frame_indices)):
-            image_path = os.path.join(path, frame_format%frame_indices[i])
-            try:
-                with Image.open(image_path) as img:
-                    img = img.convert('RGB')
-            except BaseException as e:
-                raise RuntimeError('Caught "{}" when loading {}'.format(str(e), image_path))
-            clip.append(img)
+        """Return data during training
 
-        clip, aug_info = self._spatial_transform(clip)
-        
-        return {'clip': clip, 'aug_info': aug_info, 'label': target, 
-                'video_name': video_name, 'mid_time': mid_time}
+        Parameters
+        ----------
+        index : int
+            index of the example in the data.
 
-    def __len__(self):
-        return len(self.data)
+        Returns
+        -------
+        dict
+            clip: List[torch.Tensor], Tensor.shape is (3,32,256,341), rgb_images of frames
+            aug_info: List[Dict], info about the augmentations done to the clips
+            label: List[Dict] for the keyframe, contains a list of annotations in that frame.
+            video_name: str, name of the video
+            mid_time: str, frame_id of the key frame
 
-
-class ROAD(data.Dataset):
-    def __init__(self,
-                 root_path,
-                 annotation_path,
-                 class_idx_path,
-                 split,
-                 spatial_transform=None,
-                 temporal_transform=None):
-        self.data = []
-        self.fps = 12
-        self.num_frames_in_clip = 91
-
-        with open(annotation_path, "r") as f:
-            if split == "train_1":
-                fs = f.read()
-                ann_dict = json.loads(fs)
-                for video in ann_dict['db'].keys():
-                    if split not in ann_dict['db'][video]['split_ids']:
-                        continue
-
-                    for frame in ann_dict['db'][video]['frames'].values():
-                        if not frame['annotated'] or len(frame['annos']) == 0:
-                            continue
-                        # Let's use this frame as a training point
-                        dp = {}
-                        frame_id = int(frame['input_image_id'])
-                        if split == "val_1" and frame_id % 1 != 0:
-                            continue
-                        dp['video'] = video
-                        dp['time'] = frame_id
-                        dp['midframe'] = frame_id
-                        dp['start_frame'] = max(0, frame_id - self.num_frames_in_clip // 2)
-                        dp['n_frames'] = self.num_frames_in_clip
-                        if dp['start_frame'] + dp['n_frames'] - 1 > ann_dict['db'][video]['numf']:
-                            dp['n_frames'] = ann_dict['db'][video]['numf'] - dp['start_frame'] + 1
-                        dp['format_str'] = '%05d.jpg'
-                        dp['frame_rate'] = self.fps
-                        dp['labels'] = []
-                        assert len(frame['annos']) > 0, frame['annotated']
-                        for annon in frame['annos'].values():
-                            label = {'bounding_box': annon['box'], 'label': annon['action_ids']}
-                            dp['labels'].append(label)
-                        self.data.append(dp)
-            elif split == "val_1":
-                fs = f.read()
-                ann_dict = json.loads(fs)
-                for video in ann_dict['db'].keys():
-                    if split not in ann_dict['db'][video]['split_ids']:
-                        continue
-
-                    for frame in ann_dict['db'][video]['frames'].values():
-                        if not frame['annotated'] or len(frame['annos']) == 0:
-                            continue
-                        # Let's use this frame as a training point
-                        dp = {}
-                        frame_id = int(frame['input_image_id'])
-                        if split == "train_1" and frame_id % 1 != 0:
-                            continue
-                        dp['video'] = video
-                        dp['time'] = frame_id
-                        dp['midframe'] = frame_id
-                        dp['start_frame'] = max(0, frame_id - self.num_frames_in_clip // 2)
-                        dp['n_frames'] = self.num_frames_in_clip
-                        if dp['start_frame'] + dp['n_frames'] - 1 > ann_dict['db'][video]['numf']:
-                            dp['n_frames'] = ann_dict['db'][video]['numf'] - dp['start_frame'] + 1
-                        dp['format_str'] = '%05d.jpg'
-                        dp['frame_rate'] = self.fps
-                        dp['labels'] = []
-                        assert len(frame['annos']) > 0, frame['annotated']
-                        for annon in frame['annos'].values():
-                            label = {'bounding_box': annon['box'], 'label': annon['action_ids']}
-                            dp['labels'].append(label)
-                        self.data.append(dp)
-                        
-
-        with open(class_idx_path, "r") as f:
-            items = json.load(f).items()
-            self.idx_to_class = sorted(items, key=lambda x: x[1])
-            self.idx_to_class = list(map(lambda x: {'name': x[0], 'id': x[1]}, self.idx_to_class))
-
-        self.root_path = root_path
-        self.spatial_transform = spatial_transform
-        self.temporal_transform = temporal_transform
-
-    def detection_bbox_to_ava(self, bbox):
-        x1, y1, x2, y2 = bbox
-        convbb = [x1/1280, y1/960, x2/1280, y2/960]
-        return convbb
-        
-
-    def _spatial_transform(self, clip):
-        if self.spatial_transform is not None:
-            init_size = clip[0].size[:2]
-            params = self.spatial_transform.randomize_parameters()
-            aug_info = get_aug_info(init_size, params)
-            
-            clip = [self.spatial_transform(img) for img in clip]
-        else:
-            aug_info = None
-        clip = torch.stack(clip, 0).permute(1, 0, 2, 3)
-        return clip, aug_info
-
-    def __getitem__(self, index):
+        Raises
+        ------
+        RuntimeError
+            there may be be errors that occur when trying to load actual images into memory.
+        """
         path = os.path.join(self.root_path, self.data[index]['video'])
         frame_format = self.data[index]['format_str']
         start_frame = self.data[index]['start_frame']
@@ -371,7 +257,7 @@ class AVAmulticropDataLoader(AVADataLoader):
                 cur_aug_info.append(datum['aug_info'][i])
             aug_info.append(cur_aug_info)
         filenames = [_['video_name'] for _ in batch]
-        labels = [_['label'] for _ in batch]
+        labels = [_['label'] for _ in batch] 
         mid_times = [_['mid_time'] for _ in batch]
         
         output = {
@@ -382,27 +268,9 @@ class AVAmulticropDataLoader(AVADataLoader):
             'mid_times': mid_times
         }
         return output
-    
+        
     
 class AVAmulticrop(AVA):
-    def _spatial_transform(self, clip):
-        if self.spatial_transform is not None:
-            assert isinstance(self.spatial_transform, list)
-                      
-            init_size = clip[0].size[:2]
-            clips, aug_info = [], []
-            for st in self.spatial_transform:
-                params = st.randomize_parameters()
-                aug_info.append(get_aug_info(init_size, params))
-            
-                clips.append(torch.stack([st(img) for img in clip], 0).permute(1, 0, 2, 3))
-        else:
-            aug_info = [None]
-            clips = [torch.stack(clip, 0).permute(1, 0, 2, 3)]
-        return clips, aug_info
-
-
-class ROADmulticrop(ROAD):
     def _spatial_transform(self, clip):
         if self.spatial_transform is not None:
             assert isinstance(self.spatial_transform, list)

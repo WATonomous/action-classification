@@ -1,6 +1,7 @@
 import torch.nn as nn
 
 from .basic import *
+from .tube import *
 
 
 def model_entry(config):
